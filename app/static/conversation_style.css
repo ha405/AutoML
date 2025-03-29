@@ -1,0 +1,142 @@
+/* Basic Reset - Consistent Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  /* Body Styling - Clean Dark Theme */
+  body {
+    background-color: #18191a;
+    font-family: 'Roboto', sans-serif;
+    color: #e0e0e0;
+    text-align: center;
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  
+  /* Chat Container - Improved Centering and Padding */
+  .chat-container {
+    max-width: 800px;
+    width: 95%;
+    margin: 40px auto;
+    padding: 40px;
+    background-color: #242526;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  /* Header Section - Reduced Padding, Clearer Hierarchy */
+  .header {
+    margin-bottom: 40px;
+    padding-top: 0;
+    padding-bottom: 20px;
+  }
+  
+  .header h1 {
+    font-size: 2.2rem;
+    color: #fff;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+  
+  /* Conversation Area - Streamlined Bubble Design */
+  .conversation {
+    width: 100%;
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 30px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .ai-bubble {
+    background-color: #3a3b3c;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 15px;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: #f0f2f5;
+    align-self: flex-start;
+    max-width: 80%;
+    word-wrap: break-word;
+  }
+  
+  /* User Input Form - Enhanced Input Box Style */
+  .response-form {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .response-form input[type="text"] {
+    flex: 1;
+    padding: 14px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 25px;
+    background-color: #3a3b3c;
+    color: #fff;
+    outline: none;
+    transition: background-color 0.2s ease;
+  }
+  
+  .response-form input[type="text"]::placeholder {
+    font-size: 1rem;
+    color: #777;
+  }
+  
+  .response-form input[type="text"]:focus {
+    background-color: #4e4f50;
+  }
+  
+  /* Submit Button - Refined Button Style */
+  .submit-button {
+    padding: 12px 24px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 25px;
+    background-color: #5865f2;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-weight: 500;
+  }
+  
+  .submit-button:hover {
+    background-color: #6772e5;
+    transform: translateY(-1px);
+  }
+  
+  .submit-button:active {
+    background-color: #4a55d4;
+    transform: translateY(0);
+  }
+  
+  /* Saved Message - Confirmation that final problem is stored */
+  .saved-message {
+    width: 100%;
+    background-color: #3a3b3c;
+    border-radius: 20px;
+    padding: 20px;
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  .saved-message p {
+    font-size: 1rem;
+    line-height: 1.4;
+    color: #f0f2f5;
+  }
+  

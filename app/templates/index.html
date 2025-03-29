@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Minimal Dark UI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <p>Bonjour.</p>
+      <h1>How can I help you today?</h1>
+    </div>
+    <!-- Wrap the input fields in a form -->
+    <form action="/" method="post" enctype="multipart/form-data">
+      <div class="input-area">
+        <div class="input-wrapper">
+          <input type="text" name="queryInput" placeholder="What do you want to know?" id="queryInput" />
+          <div class="input-icons">
+            <label for="file-upload" class="icon-button file-upload-icon">📁</label>
+            <input type="file" name="file-upload" id="file-upload" style="display: none;">
+            <button type="button" class="icon-button voice-input-icon" id="voiceBtn">🎤</button>
+          </div>
+        </div>
+      </div>
+      <button type="submit" class="action-button">Lets GO</button>
+    </form>
+  </div>
+  
+  <!-- Voice Input Script -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const voiceButton = document.getElementById('voiceBtn');
+      const textInput = document.getElementById('queryInput');
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        console.warn("Your browser does not support Speech Recognition.");
+        voiceButton.disabled = true;
+        voiceButton.title = "Speech Recognition not supported";
+        return;
+      }
+      
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      
+      voiceButton.addEventListener("click", function() {
+        recognition.start();
+      });
+      
+      recognition.addEventListener("result", function(event) {
+        const transcript = event.results[0][0].transcript;
+        textInput.value = transcript;
+      });
+      
+      recognition.addEventListener("error", function(event) {
+        console.error("Speech Recognition Error: ", event.error);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Getting On Track</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='conversation_style.css') }}">
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">
+      <h1>Getting On Track...</h1>
+    </div>
+
+    <div class="conversation">
+      {% if conversation %}
+        {% set full_message = conversation[-1].split(":", 1)[1].strip() %}
+        {% if full_message.startswith("Question") %}
+          {% set display_message = full_message.split(")", 1)[1].strip() %}
+        {% else %}
+          {% set display_message = full_message %}
+        {% endif %}
+        <div class="ai-bubble">
+          <p class="question-text">{{ display_message }}</p>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if final_problem %}
+      <div class="saved-message">
+        <p>Your final business problem has been saved for later use.</p>
+      </div>
+    {% else %}
+      <form action="{{ url_for('conversation') }}" method="post" class="response-form">
+        <input type="text" name="user_response" placeholder="Type your answer here..." required>
+        <button type="submit" class="submit-button">>>></button>
+      </form>
+    {% endif %}
+  </div>
+</body>
+</html>
