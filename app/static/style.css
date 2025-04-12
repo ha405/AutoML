@@ -1,0 +1,152 @@
+/* Basic Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Body Styling - Dark Background */
+body {
+  background-color: #1e1e1e;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #e0e0e0;
+  text-align: center; /* Center text and elements by default */
+}
+
+/* Container for main content */
+.container {
+  max-width: 1200px; /* Further increased max-width for even wider layout */
+  margin: 60px auto; /* Space from the top and center horizontally */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center items horizontally in container */
+}
+
+/* Header Section */
+.header {
+  margin-bottom: 30px;
+  padding-top: 30%; /* Slightly reduced padding-top more */
+}
+
+.header p {
+  font-size: 1rem;     /* Smaller text for greeting */
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  font-size: 2.5rem;     /* Increased font size for main question */
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Input Area - Much Wider and Chat-like */
+.input-area {
+  width: 100%;        /* Increased to 95% to take up almost full container width */
+  max-width: 1000px;   /* Further increased max-width for a very wide input area */
+  margin-bottom: 35px;
+  display: flex;
+  justify-content: center;
+  /* margin-right: 50%;  <-- REMOVED THIS LINE TO CENTER THE TEXTBOX */
+  /* padding-right: 80%; */
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #2d2d2d;
+  border-radius: 40px; /* Increased border-radius for more rounded chat-like input */
+  padding: 8px 12px;     /* Slightly increased padding */
+  width: 100%;          /* Make input-wrapper fill input-area width */
+}
+
+.input-wrapper input[type="text"] {
+  flex-grow: 1;
+  padding: 16px 24px; /* Increased padding inside input for a larger feel */
+  font-size: 1.1rem;   /* Slightly larger text inside input */
+  border: none;
+  border-radius: 40px; /* Match border-radius of wrapper */
+  background-color: transparent;
+  color: #fff;
+  outline: none;
+}
+
+.input-wrapper input[type="text"]::placeholder {
+  font-size: 1.1rem;   /* Match placeholder font size to input text */
+  color: #bbb;
+}
+
+/* Icon Buttons on the Right */
+.input-icons {
+  display: flex;
+  align-items: center;
+}
+
+.icon-button {
+  background-color: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem; /* Slightly larger icons */
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.icon-button:hover {
+  background-color: #333;
+}
+
+.icon-button:active {
+  background-color: #444;
+}
+
+/* Action Buttons (Optional row of buttons/links below input) */
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;               /* Increased gap between buttons */
+  justify-content: center;
+  margin-bottom: 40px; /* Increased margin below buttons */
+}
+
+.action-button {
+  padding: 12px 25px;
+  font-size: 1.1rem;   /* Slightly larger button text */
+  border: none;
+  border-radius: 30px;
+  background-color: #555;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-weight: bold;
+}
+
+.action-button:hover {
+  background-color: #666;
+  transform: translateY(-2px);
+}
+
+.action-button:active {
+  background-color: #777;
+  transform: translateY(0);
+}
+
+/* Footer Section (Optional) */
+.footer {
+  margin-top: 30px; /* Increased margin above footer */
+  border-top: 1px solid #555;
+  padding-top: 15px; /* Increased padding in footer */
+}
+
+.footer a {
+  font-size: 1.1rem;   /* Slightly larger footer link text */
+  color: #007BFF;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer a:hover {
+  color: #00a2ff;
+  text-decoration: underline;
+}
