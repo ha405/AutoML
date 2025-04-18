@@ -1,0 +1,20 @@
+**EDA Summary**
+The EDA process resulted in a final data shape of (10127, 23) after preprocessing. Missing values were handled using median imputation for numeric columns and most frequent imputation for categorical columns. Categorical features were encoded using LabelEncoder for binary categorical variables and OneHotEncoder for multi-class categorical variables. Columns with high cardinality (> 10 unique values) were dropped. The feature 'Avg_Trans_Value' was engineered by dividing 'Total_Trans_Amt' by 'Total_Trans_Ct'.
+
+**Target Variable**
+The most likely target variable for the ML model is 'Attrition_Flag'.
+
+**ML Task Type**
+Based on the target variable 'Attrition_Flag', which is a binary categorical variable, the primary task is **Classification**. This is because the goal is to predict whether a customer will churn or not, which is a binary classification problem.
+
+**Recommended Model Types**
+Based on the ML task type and data characteristics, the following models are recommended:
+
+* **Logistic Regression**: A good baseline model for binary classification problems, which can provide interpretable results.
+* **Random Forest Classifier**: A robust model that can handle mixed data types and non-linear relationships, which can provide good accuracy.
+* **LightGBM Classifier**: An efficient model that can handle large datasets and provide good accuracy, which can be useful for this problem.
+
+**Next Step Considerations**
+* Ensure that scaling is applied consistently to all features before training the models.
+* Pay attention to the feature 'Avg_Trans_Value' which was engineered during EDA, as it may be an important predictor of customer churn.
+* Consider using techniques such as feature selection or dimensionality reduction to reduce the feature space and improve model performance.
