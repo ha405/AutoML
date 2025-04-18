@@ -269,11 +269,7 @@ Output ONLY the fully revised, raw Python code. Do not include explanations or a
 
 def save_code_to_file(code, filename="generated_eda.py"):
     """Saves the generated code to a file in the Colab environment."""
-    # Define the directory where scripts should be saved in Colab
-    save_dir = r"E:\AutoML\app\scripts" # Save directly in the root content directory for simplicity
-    # os.makedirs(save_dir, exist_ok=True) # Not needed for /content/
-
-    # Join the directory and filename to get the full path
+    save_dir = r"E:\AutoML\app\scripts" 
     file_path = os.path.join(save_dir, filename)
     try:
         with open(file_path, "w") as f:

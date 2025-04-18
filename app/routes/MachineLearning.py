@@ -1,28 +1,17 @@
-# MachineLearning.py
 import time
-from groq import Groq  # Import Groq
-# from utils import filepreprocess # Assuming this is not needed directly here
+from groq import Groq  
 import os
-
-# --- Configuration ---
-# WARNING: Hardcoding API keys is insecure. Use environment variables or secrets management in production.
-API_KEY = "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" # User requested hardcoding
-MODEL_NAME = "llama3-70b-8192" # Using the model known to work with Groq
-
-# Set environment variable for Groq client (it often reads this automatically)
+API_KEY = "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" 
+MODEL_NAME = "llama3-70b-8192"
 os.environ["GROQ_API_KEY"] = API_KEY
 
 try:
-    # Initialize Groq client
-    # It will automatically use the GROQ_API_KEY environment variable if set
     client = Groq()
     print(f"Groq client configured with model: {MODEL_NAME}")
 except Exception as e:
     print(f"❌ Error configuring Groq client: {e}")
-    client = None # Set client to None if configuration fails
+    client = None
 
-# --- Prompt Templates ---
-# (SYSTEM_INSTRUCTION_ML_GENERATOR_TEMPLATE and SYSTEM_INSTRUCTION_ML_REFLECTOR_TEMPLATE remain the same as you provided)
 SYSTEM_INSTRUCTION_ML_GENERATOR_TEMPLATE = r"""
 You are an expert AI/ML engineer and Python programmer specializing in generating end-to-end machine learning pipelines.
 Your goal is to create a complete, clean, robust, and executable Python script based on the provided context.
@@ -158,17 +147,13 @@ Note: The code should literally start off with the import statements. Don't incl
 Note: The code should literally start off with the import statements. Don't include any introduction like "Here is the corrected script". 
 *   Otherwise, provide concise, constructive feedback listing the specific issues found and suggest exact corrections needed. Be specific (e.g., "Line 45: Preprocessing pipeline should be fitted only on X_train, not the whole X."). Do NOT provide the fully corrected code, only the feedback/corrections list. Start feedback with "Issues found:".
 """
-
-# --- Core Functions ---
-
-def generate_response(messages_list): # Changed parameter name for clarity
+def generate_response(messages_list): 
     """Sends a prompt (message list) to the Groq model and returns the cleaned text response."""
     if not client:
         return "# Error: Groq client not configured."
     try:
         print(f"Sending request to {MODEL_NAME}...")
 
-        # Use Groq's chat completions API
         completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=messages_list, # Pass the list of messages directly
@@ -179,14 +164,10 @@ def generate_response(messages_list): # Changed parameter name for clarity
             # stream=False, # Optional
         )
         print("Response received.")
-
-        # Access the response content using Groq/OpenAI structure
         if completion.choices and completion.choices[0].message:
             text = completion.choices[0].message.content
         else:
-            # Handle cases where the response might be blocked or empty
             print("Warning: Groq response might be empty or blocked.")
-            # You might want to inspect completion.choices[0].finish_reason here
             text = f"# Error: No valid response text received. Finish Reason: {completion.choices[0].finish_reason if completion.choices else 'UNKNOWN'}"
 
         # Clean markdown (same as before)
@@ -203,7 +184,7 @@ def generate_response(messages_list): # Changed parameter name for clarity
         print(f"❌ An error occurred during Groq API call: {e}")
         return f"# Error generating response: {e}"
 
-def generate_initial_ml_code(business_problem, file_path):
+def generate_initial_ml_code(business_problem, file_path, ML_PLAN):
     """Generates the initial Python ML script."""
     print("Preparing prompt for initial ML code generation...")
     # Create the initial message list for the generator
@@ -212,7 +193,8 @@ def generate_initial_ml_code(business_problem, file_path):
             "role": "system",
             "content": SYSTEM_INSTRUCTION_ML_GENERATOR_TEMPLATE.format(
                 business_problem_str=business_problem,
-                file_path_str=file_path
+                file_path_str=file_path,
+                ml_guide=ML_PLAN
             )
             # Note: The template itself acts as the system message here.
             # If you wanted a separate system message AND the template as user message,

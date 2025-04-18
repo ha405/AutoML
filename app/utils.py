@@ -42,3 +42,27 @@ def filepreprocess(file):
     else:
         print(f"Unsupported file format: {file.filename}")
         return {"error": "Unsupported file format. Currently, only CSV files are processed."}
+    
+
+def load_code_from_file(file_path):
+    """Loads Python code from a file."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            code = f.read()
+        return code
+    except Exception as e:
+        print(f"Error reading code file: {e}")
+        return None
+
+def load_logs_from_file(file_path):
+    """Loads logs from a text file."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            logs = f.read()
+        return logs
+    except FileNotFoundError:
+        print(f"Warning: Logs file not found at {file_path}. Proceeding with empty logs.")
+        return "# No EDA logs file found at specified path."
+    except Exception as e:
+        print(f"Error reading logs file: {e}")
+        return f"# Error reading EDA logs: {e}"

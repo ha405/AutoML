@@ -8,10 +8,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # I
 from routes import AnalysisPlanner  # Import your AnalysisPlanner script
 
 # --- Configuration ---
-EDA_CODE_FILE_PATH = r'E:\AutoML\app\scripts\credit_churn_eda.py' # Path to your EDA script
-EDA_LOGS_FILE_PATH = r'E:\AutoML\app\scripts\data_analysis_logs.txt' # Path to your EDA logs file (create a dummy or use actual)
-OUTPUT_PLAN_FILE = r"E:\AutoML\app\scripts\ml_plan_output.txt" # File to save the ML plan output
-DATASET_PATH = "E:\AutoML\TestDatasets\credit_card_churn.csv" # Make sure this file exists in /content/
+EDA_CODE_FILE_PATH = r'E:\AutoML\app\scripts\credit_churn_eda.py'
+EDA_LOGS_FILE_PATH = r'E:\AutoML\app\scripts\data_analysis_logs.txt' 
+OUTPUT_PLAN_FILE = r"E:\AutoML\app\scripts\ml_plan_output.txt"
+DATASET_PATH = "E:\AutoML\TestDatasets\credit_card_churn.csv" 
 
 class MockFile:
     def __init__(self, path):
