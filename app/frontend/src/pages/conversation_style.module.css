@@ -1,0 +1,234 @@
+/* conversation-style.module.css - FINAL LOCAL VERSION - Attempt 3 for Layout */
+
+/*--------------------------------------------------------------
+   VARIABLES (Local Scope)
+--------------------------------------------------------------*/
+.conversationPageWrapper {
+  --local-page-grad-1: #100f1a;
+  --local-page-grad-2: #2c1a3e;
+  --local-page-grad-3: #100f1a;
+  --local-page-grad-4: #4a1f4b;
+  --local-accent: #00d8ff;
+  --local-accent-gradient-end: #3a7bd5;
+  --local-bg-container-solid: #181a21;
+  --local-bg-input:       rgba(255, 255, 255, 0.06);
+  --local-bg-input-focus: rgba(255, 255, 255, 0.12);
+  --local-bubble-ai-bg:   #2f3340;
+  --local-bubble-user-grad-1:  var(--local-accent);
+  --local-bubble-user-grad-2:  var(--local-accent-gradient-end);
+  --local-bg-footer-form: rgba(24, 26, 33, 0.85);
+  --local-text-primary:  #eceff1;
+  --local-text-secondary: #adb5bd;
+  --local-text-placeholder: #7f8a97;
+  --local-text-on-accent: #ffffff;
+  --local-radius-container: 20px;
+  --local-radius-bubble:    16px;
+  --local-radius-input:     25px;
+  --local-shadow-soft:  0 3px 8px rgba(0,0,0,0.3);
+  --local-shadow-medium: 0 10px 30px rgba(0,0,0,0.4);
+  --local-shadow-accent: 0 4px 15px rgba(0, 180, 216, 0.15);
+  --local-shadow-accent-hover: 0 6px 20px rgba(0, 180, 216, 0.25);
+  --local-font-main: 'Space Grotesk', sans-serif;
+}
+
+/* Keyframes */
+@keyframes bgShift {
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+@keyframes pulse {
+  0%   { transform: scale(1.1); opacity: 1; }
+  50%  { transform: scale(1.25); opacity: 0.7; }
+  100% { transform: scale(1.1); opacity: 1; }
+}
+
+/*--------------------------------------------------------------
+   OUTER WRAPPER (Handles Page Background & Centering Inner Window)
+--------------------------------------------------------------*/
+.conversationPageWrapper {
+  background: linear-gradient(110deg, var(--local-page-grad-1), var(--local-page-grad-2), var(--local-page-grad-4), var(--local-page-grad-3));
+  background-size: 400% 400%;
+  animation: bgShift 15s ease infinite;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+  font-family: var(--local-font-main);
+  color: var(--local-text-primary);
+}
+
+/*--------------------------------------------------------------
+   CHAT WINDOW (The visible chat box)
+--------------------------------------------------------------*/
+.chatWindow {
+  width: 100%;
+  max-width: 900px;
+  height: 100%;
+  max-height: 850px;
+  position: relative;
+  background: var(--local-bg-container-solid);
+  border-radius: var(--local-radius-container);
+  box-shadow: var(--local-shadow-medium);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/*--------------------------------------------------------------
+   HEADER
+--------------------------------------------------------------*/
+.header {
+  flex-shrink: 0;
+  padding: 16px 24px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: sticky; top:0;
+  background: var(--local-bg-container-solid);
+  z-index: 10;
+}
+.header h1 {
+  margin:0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, var(--local-accent), var(--local-accent-gradient-end));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(0, 216, 255, 0.1);
+  letter-spacing: 0.8px;
+}
+
+/*--------------------------------------------------------------
+   CONVERSATION AREA
+--------------------------------------------------------------*/
+.conversation {
+  flex: 1 1 0%; /* Explicit shorthand for grow, shrink, basis */
+  min-height: 0; /* Allow shrinking below content size */
+  overflow-y:auto;
+  padding: 20px 30px;
+  display:flex; flex-direction:column; gap: 16px;
+}
+.conversation::-webkit-scrollbar { width: 8px; }
+.conversation::-webkit-scrollbar-track { background: transparent; }
+.conversation::-webkit-scrollbar-thumb {
+  background-color: rgba(255,255,255,0.18);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.conversation::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255,255,255,0.35);
+}
+
+/*--------------------------------------------------------------
+   MESSAGE BUBBLES
+--------------------------------------------------------------*/
+.aiBubble,
+.userBubble {
+  position: relative;
+  max-width: 75%;
+  padding: 14px 20px;
+  border-radius: var(--local-radius-bubble);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  box-shadow: var(--local-shadow-soft);
+}
+.aiBubble {
+  align-self:flex-start;
+  background: var(--local-bubble-ai-bg);
+  color: var(--local-text-primary);
+}
+.userBubble {
+  align-self:flex-end;
+  background: linear-gradient(135deg, var(--local-bubble-user-grad-1), var(--local-bubble-user-grad-2));
+  color: var(--local-text-on-accent);
+}
+
+/*--------------------------------------------------------------
+   RESPONSE FORM
+--------------------------------------------------------------*/
+.responseForm {
+  flex-shrink: 0;
+  display:flex; gap: 10px;
+  padding: 18px 30px;
+  background: var(--local-bg-footer-form);
+  backdrop-filter: blur(12px);
+  border-top:1px solid rgba(255,255,255,0.08);
+  position:sticky; bottom:0; z-index:10;
+}
+.responseForm input[type="text"] {
+  flex:1;
+  padding: 14px 22px;
+  font-size: 1rem;
+  font-family: inherit;
+  border:none;
+  border-radius:var(--local-radius-input);
+  background: var(--local-bg-input);
+  color: var(--local-text-primary);
+  outline:none;
+  transition: background 0.2s ease, box-shadow 0.3s ease;
+}
+.responseForm input[type="text"]::placeholder {
+  color: var(--local-text-placeholder);
+  opacity: 1;
+}
+.responseForm input[type="text"]:focus {
+  background: var(--local-bg-input-focus);
+  box-shadow: 0 0 12px rgba(var(--local-accent), 0.35);
+}
+
+/*--------------------------------------------------------------
+   SUBMIT BUTTON
+--------------------------------------------------------------*/
+.submitButton {
+  padding: 14px 32px;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  border:none;
+  border-radius:var(--local-radius-input);
+  background: linear-gradient(135deg, var(--local-accent), var(--local-accent-gradient-end));
+  color: var(--local-text-on-accent);
+  cursor:pointer;
+  transition:transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--local-shadow-accent);
+  white-space: nowrap;
+}
+.submitButton:not(:disabled):hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: var(--local-shadow-accent-hover);
+}
+.submitButton:disabled {
+  background: var(--local-bubble-ai-bg);
+  opacity:0.5;
+  cursor:not-allowed;
+  box-shadow:none;
+  transform: none;
+}
+
+/*--------------------------------------------------------------
+   SAVED MESSAGE
+--------------------------------------------------------------*/
+.savedMessage {
+ width: auto;
+ display: inline-block;
+ margin: 20px auto;
+ background-color: var(--local-bubble-ai-bg);
+ border-radius: var(--local-radius-bubble);
+ padding: 15px 25px;
+ text-align: center;
+ box-shadow: var(--local-shadow-soft);
+ flex-shrink: 0;
+}
+.savedMessage p {
+ font-size: 0.98rem;
+ line-height: 1.5;
+ color: var(--local-text-primary);
+}

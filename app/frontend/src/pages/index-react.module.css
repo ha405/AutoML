@@ -1,0 +1,230 @@
+/* index-react.module.css - FINAL */
+
+/*--------------------------------------------------------------
+   IMPORT & VARIABLES (Local Scope)
+--------------------------------------------------------------*/
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap');
+
+:root {
+  --local-bg-grad-1: #0f0f1a;
+  --local-bg-grad-2: #141827;
+  --local-bg-grad-3: #0f0f1a;
+  --local-bg-grad-4: #2a3050;
+  --local-accent: #00d8ff;
+  --local-accent-gradient-end: #3a7bd5;
+  --local-bg-input:       rgba(255, 255, 255, 0.05);
+  --local-bg-input-focus: rgba(255, 255, 255, 0.1);
+  --local-text-primary:  #e8eaf0;
+  --local-text-secondary: #a0a8b4;
+  --local-text-placeholder: #777;
+  --local-text-on-accent: #ffffff;
+  --local-radius-input:     30px;
+  --local-shadow-accent: 0 4px 15px rgba(0, 180, 216, 0.15);
+  --local-shadow-accent-hover: 0 6px 20px rgba(0, 180, 216, 0.25);
+  --local-bubble-ai-bg:   #2a2d38;
+  --local-font-main: 'Space Grotesk', sans-serif;
+}
+
+/* Keyframes */
+@keyframes bgShift {
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+@keyframes pulse {
+  0%   { transform: scale(1.1); opacity: 1; }
+  50%  { transform: scale(1.25); opacity: 0.7; }
+  100% { transform: scale(1.1); opacity: 1; }
+}
+@keyframes slideFade {
+  0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/*--------------------------------------------------------------
+  MAIN COMPONENT WRAPPER (.autoML)
+--------------------------------------------------------------*/
+.autoML {
+  background: linear-gradient(110deg, var(--local-bg-grad-1), var(--local-bg-grad-2), var(--local-bg-grad-4), var(--local-bg-grad-3));
+  background-size: 400% 400%;
+  animation: bgShift 15s ease infinite;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px; /* Minimal padding */
+  box-sizing: border-box;
+  width: 100%;
+  font-family: var(--local-font-main, 'Space Grotesk', sans-serif);
+  color: var(--local-text-primary);
+  position: relative;
+  overflow: hidden; /* Prevent potential background bleed */
+}
+
+/*--------------------------------------------------------------
+   CONTENT CONTAINER (.container)
+--------------------------------------------------------------*/
+.container {
+  width: 100%;
+  max-width: 650px;
+  text-align: left;
+  z-index: 1;
+  margin-top: auto; /* Push container down */
+  margin-bottom: 5vh; /* Space from absolute bottom */
+}
+
+/*--------------------------------------------------------------
+   HEADER
+--------------------------------------------------------------*/
+.header {
+  margin-bottom: 20px;
+}
+.header p {
+  font-size: 0.9rem;
+  letter-spacing: 1.5px;
+  color: var(--local-text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.header h1 {
+  font-size: 2.8rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--local-accent), var(--local-accent-gradient-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(0, 216, 255, 0.15);
+  /* animation: slideFade 1.2s ease-out; */
+}
+
+/*--------------------------------------------------------------
+  FORM AREA
+--------------------------------------------------------------*/
+.inputArea {
+  margin: 40px 0;
+}
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  background: var(--local-bg-input);
+  border-radius: var(--local-radius-input);
+  padding: 16px 24px;
+  transition: background 0.2s ease, box-shadow 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+.inputWrapper:focus-within {
+  background: var(--local-bg-input-focus);
+  box-shadow: 0 0 12px rgba(var(--local-accent), 0.3);
+}
+.inputWrapper input[type="text"] {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  font-family: inherit;
+  color: var(--local-text-primary);
+  outline: none;
+  padding-right: 15px;
+}
+.inputWrapper input[type="text"]::placeholder {
+  color: var(--local-text-placeholder);
+  opacity: 1;
+}
+.inputIcons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/*--------------------------------------------------------------
+  Icon Button Styling
+--------------------------------------------------------------*/
+.iconButton {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--local-text-secondary);
+  transition: color 0.2s ease, transform 0.2s ease;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.iconButton:hover:not(:disabled) {
+  color: var(--local-accent);
+  transform: scale(1.1);
+}
+.iconButton.active {
+  color: #ff4d4d;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/*--------------------------------------------------------------
+  ACTION BUTTON
+--------------------------------------------------------------*/
+.actionButton {
+  margin-top: 1.5rem;
+  padding: 16px 40px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: var(--local-radius-input);
+  background: linear-gradient(135deg, var(--local-accent), var(--local-accent-gradient-end));
+  color: var(--local-text-on-accent);
+  box-shadow: var(--local-shadow-accent);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-block;
+  text-align: center;
+}
+.actionButton:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: var(--local-shadow-accent-hover);
+}
+.actionButton:disabled {
+  background: var(--local-bubble-ai-bg);
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/*--------------------------------------------------------------
+  STATUS MESSAGES
+--------------------------------------------------------------*/
+.fileDisplay,
+.statusDisplay {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  height: 1.3em;
+  opacity: 0.9;
+}
+.fileDisplay {
+  color: var(--local-text-secondary);
+}
+.listeningIndicator {
+  color: #00ffaa;
+  font-style: italic;
+}
+.errorMessage {
+  color: #ff8080;
+  font-weight: 500;
+}
+
+/* Glow effect when listening */
+.autoML.listening .inputWrapper,
+.listening .inputWrapper {
+  box-shadow: 0 0 15px 3px rgba(var(--local-accent), 0.4);
+}
