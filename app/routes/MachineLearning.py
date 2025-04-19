@@ -28,6 +28,10 @@ Note: The code should literally start off with the import statements. Don't incl
 {business_problem_str}
 </business_problem>
 
+<ml_plan>
+{ml_guide}
+</ml_plan>
+
 **Instructions for Python Script Generation:**
 
 Generate a Python script that performs the following steps IN ORDER:
@@ -110,6 +114,10 @@ The script was generated based on the following requirements summarized below:
 <script>
 {generated_code}
 </script>
+
+<ml_plan>
+{ml_guide}
+</ml_plan>
 
 **Review Criteria:**
 
@@ -206,7 +214,7 @@ def generate_initial_ml_code(business_problem, file_path, ML_PLAN):
     print("Initial ML code generated.")
     return ml_code
 
-def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
+def generate_and_refine_ml_code(business_problem, file_path, ML_PLAN, max_refinements=3):
     """Generates and refines the ML code using a self-evaluation loop."""
 
     # Generate concise requirements summary for the reflector
@@ -224,7 +232,7 @@ def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
     """
 
     print("--- Generating Initial ML Code (Attempt 1) ---")
-    current_code = generate_initial_ml_code(business_problem, file_path)
+    current_code = generate_initial_ml_code(business_problem, file_path, ML_PLAN)
     # print(f"Initial Code:\n```python\n{current_code}\n```") # Debug
 
     if current_code.startswith("# Error"):
@@ -238,7 +246,8 @@ def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
             "role": "system", # System prompt for the generator
             "content": SYSTEM_INSTRUCTION_ML_GENERATOR_TEMPLATE.format(
                 business_problem_str=business_problem,
-                file_path_str=file_path
+                file_path_str=file_path,
+                ml_guide=ML_PLAN
             )
         },
         # The first 'assistant' response is the initial code
@@ -255,6 +264,7 @@ def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
                  "content": SYSTEM_INSTRUCTION_ML_REFLECTOR_TEMPLATE.format(
                      requirements_summary=requirements_summary,
                      generated_code=current_code,
+                     ml_guide = ML_PLAN,
                      file_path_str=file_path
                  )
              }
@@ -299,3 +309,30 @@ def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
 
     print(f"\n--- Max refinements ({max_refinements}) reached. Returning last generated code. ---")
     return current_code
+
+# --- NEW FUNCTION TO SAVE ML CODE ---
+def save_ml_code_to_file(code, filename="ML.py"):
+    """Saves the generated ML code to a specific file in the scripts directory."""
+    # Define the target directory and ensure it's a raw string for Windows paths
+    save_dir = r"E:\AutoML\app\scripts"
+    # Define the specific filename
+    output_filename = filename # Use the provided filename, defaulting to ML.py
+
+    # Ensure the directory exists
+    try:
+        os.makedirs(save_dir, exist_ok=True)
+    except OSError as e:
+         print(f"❌ Error creating directory {save_dir}: {e}")
+         return # Exit if directory creation fails
+
+    # Combine the directory and filename to get the full path
+    file_path = os.path.join(save_dir, output_filename)
+    try:
+        with open(file_path, "w", encoding='utf-8') as f:
+            f.write(code)
+        print(f"✅ ML script saved successfully at: {file_path}")
+    except OSError as e: # Catch specific OS errors related to file paths/writing
+        print(f"❌ Error saving file to {file_path}: [Errno {e.errno}] {e.strerror}")
+        print(f"   Problematic path might be interpreted as: {repr(file_path)}")
+    except Exception as e: # Catch other potential errors
+        print(f"❌ An unexpected error occurred during file saving: {e}")

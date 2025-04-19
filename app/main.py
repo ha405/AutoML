@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, session, redirect, url_for
 from routes import feedback
 from utils import filepreprocess, load_code_from_file,load_logs_from_file
-from routes import MachineLearning, data_analysis,AnalysisPlanner
+from routes import MachineLearning, data_analysis, AnalysisPlanner
 from constants import EDA_CODE_FILE_PATH,EDA_LOGS_FILE_PATH,DATASET_PATH,OUTPUT_PLAN_FILE
 
 app = Flask(__name__)
@@ -19,7 +19,7 @@ def home():
             print("file")
         else:
             print(prompt)
-        filedetails = filepreprocess(file)
+        filedetails = filepreprocess("E:\AutoML\app\scripts" + file)
         # print(filedetails)
         conversation = [f"User: {prompt}", f"System: {feedback.SYSTEM_PROMPT_INITIAL}"]
         session["conversation"] = conversation
@@ -57,7 +57,7 @@ def conversation():
 def dataanalysis():
     global final_business_problem, filedetails
     from routes import data_analysis
-    eda_code = data_analysis.generate_data_analysis_code(filedetails, final_business_problem)
+    eda_code = data_analysis.generate_and_refine_eda_code(filedetails, final_business_problem, DATASET_PATH)
     data_analysis.save_code_to_file(eda_code)
     # Data Analysis Code Execution Here
     # return (f"Final Business Problem Stored: {final_business_problem}<br>"
@@ -100,10 +100,10 @@ def ml():
             new_filedetails = filepreprocess(f)
     except Exception as e:
         new_filedetails = {"error": f"Unable to read processed CSV file: {str(e)}"}
-    ml_code = MachineLearning.generate_ml_code(final_business_problem,new_filedetails, ML_PLAN)
+    ml_code = MachineLearning.generate_and_refine_ml_code(final_business_problem,new_filedetails, ML_PLAN)
     MachineLearning.save_ml_code_to_file(ml_code)
     return (
-        f"Business Problem for ML (from file): {business_problem_text}<br>"
+        f"Business Problem for ML (from file): {final_business_problem}<br>"
         f"ML code generated and saved to 'ML.py' in the scripts folder."
     )
 

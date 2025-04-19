@@ -267,7 +267,7 @@ Output ONLY the fully revised, raw Python code. Do not include explanations or a
 
    # ------------------------------------#
 
-def save_code_to_file(code, filename="generated_eda.py"):
+def save_code_to_file(code, filename="Eda_code.py"):
     """Saves the generated code to a file in the Colab environment."""
     save_dir = r"E:\AutoML\app\scripts" 
     file_path = os.path.join(save_dir, filename)
