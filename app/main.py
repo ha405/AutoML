@@ -174,7 +174,7 @@ def ml():
     with open(OUTPUT_PLAN_FILE, "r", encoding="utf-8") as plan_file:
         ML_PLAN = plan_file.read()
     try:
-        csv_file_path = r"E:\AutoML\processed_sales_data_sample.csv" 
+        csv_file_path = r"E:\AutoML\Input_processed.csv"
         with open(csv_file_path, "rb") as f:
             new_filedetails = filepreprocess(f)
     except Exception as e:

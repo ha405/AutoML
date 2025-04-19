@@ -23,6 +23,10 @@ Your goal is to generate a complete, clean, and fully executable Python script b
 {file_path_str}
 </target_file_path>
 
+<final_file_path> 
+{result_file_path}
+</final_file_path> 
+
 **Instructions for Python Script Generation:**
 
 Generate a Python script that performs the following steps in order:
@@ -67,7 +71,8 @@ Generate a Python script that performs the following steps in order:
     *   Print the final shape: `print(f"Final Processed Shape: {{df.shape}}")`
     *   Print final data types: `print("Final Data Types:\n", df.dtypes)` Check for remaining 'object' types.
     *   Print summary statistics: `print("Summary Statistics (Processed Data):\n", df.describe(include='all'))`
-10.  **Save the dataframe to the original file path.**
+10.  **Save the dataframe to the following file path: PROCESSED_DATASET_PATH = r"E:\AutoML\Input_processed.csv".**
+11.  ** Save the final resultant dataframe to the <final_file_path> 
 
 **Output Format:**
 *   Your response MUST contain ONLY the raw Python code for the script.
@@ -137,7 +142,8 @@ def generate_data_analysis_code(filedetails, business_problem, file_path):
     prompt = SYSTEM_INSTRUCTION_EDA_TEMPLATE.format(
         file_details_str=file_details_str,
         business_problem_str=business_problem,
-        file_path_str=file_path # Pass the actual file path here
+        file_path_str=file_path,
+        result_file_path=r"AutoML\Input_processed.csv"
     )
 
     # print(f"Prompt Sent:\n{prompt[:500]}...") # Debug: Print start of prompt
