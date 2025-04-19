@@ -28,6 +28,13 @@ Note: The code should literally start off with the import statements. Don't incl
 {business_problem_str}
 </business_problem>
 
+<ml_plan>
+{ml_guide}
+</ml_plan>
+
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
+
+
 **Instructions for Python Script Generation:**
 
 Generate a Python script that performs the following steps IN ORDER:
@@ -94,11 +101,15 @@ VERY IMPORTANT: The code shouldnt contain anything like "Here is corrected code"
 AND: It shouldn't contain any introductory or concluding remarks about code either as no text is needed. ONLY RAW PYTHON CODE
 
 The code should literally start off with the import statements. Don't include any introduction like "Here is the corrected script"
+
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
 """
 
 SYSTEM_INSTRUCTION_ML_REFLECTOR_TEMPLATE = r"""
 You are an expert Python code reviewer and AI/ML Quality Assurance specialist.
 Your task is to meticulously review the provided Python script intended for building a machine learning pipeline.
+
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
 
 **Context:**
 The script was generated based on the following requirements summarized below:
@@ -111,8 +122,17 @@ The script was generated based on the following requirements summarized below:
 {generated_code}
 </script>
 
+<ml_plan>
+{ml_guide}
+</ml_plan>
+
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
+
 **Review Criteria:**
 
+0. **ONLY PYTHON CODE, NO TEXT**
+    * The code shouldnt contain anything like "Here is corrected code". 
+    * It should ONLY contain code, no comments, nothing else. just python code
 1.  **Correctness & Logic:**
     *   Does the code run without syntax errors?
     *   Is the file loaded correctly using the specified path (`{file_path_str}`)? Is `FileNotFoundError` handled?
@@ -142,8 +162,10 @@ The script was generated based on the following requirements summarized below:
 
 Note: The code should literally start off with the import statements. Don't include any introduction like "Here is the corrected script". 
 
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
+
 **Output:**
-*   If the script meets all criteria, appears logically sound, and is likely to run correctly, respond ONLY with: `<OK>`
+*   If the script meets all criteria, appears logically sound, and is likely to run correctly, respond ONLY with: `<OK>`. NOTHING ELSE
 Note: The code should literally start off with the import statements. Don't include any introduction like "Here is the corrected script". 
 *   Otherwise, provide concise, constructive feedback listing the specific issues found and suggest exact corrections needed. Be specific (e.g., "Line 45: Preprocessing pipeline should be fitted only on X_train, not the whole X."). Do NOT provide the fully corrected code, only the feedback/corrections list. Start feedback with "Issues found:".
 """
@@ -206,7 +228,7 @@ def generate_initial_ml_code(business_problem, file_path, ML_PLAN):
     print("Initial ML code generated.")
     return ml_code
 
-def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
+def generate_and_refine_ml_code(business_problem, file_path, ML_PLAN, max_refinements=3):
     """Generates and refines the ML code using a self-evaluation loop."""
 
     # Generate concise requirements summary for the reflector
@@ -224,7 +246,7 @@ def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
     """
 
     print("--- Generating Initial ML Code (Attempt 1) ---")
-    current_code = generate_initial_ml_code(business_problem, file_path)
+    current_code = generate_initial_ml_code(business_problem, file_path, ML_PLAN)
     # print(f"Initial Code:\n```python\n{current_code}\n```") # Debug
 
     if current_code.startswith("# Error"):
@@ -238,7 +260,8 @@ def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
             "role": "system", # System prompt for the generator
             "content": SYSTEM_INSTRUCTION_ML_GENERATOR_TEMPLATE.format(
                 business_problem_str=business_problem,
-                file_path_str=file_path
+                file_path_str=file_path,
+                ml_guide=ML_PLAN
             )
         },
         # The first 'assistant' response is the initial code
@@ -255,6 +278,7 @@ def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
                  "content": SYSTEM_INSTRUCTION_ML_REFLECTOR_TEMPLATE.format(
                      requirements_summary=requirements_summary,
                      generated_code=current_code,
+                     ml_guide = ML_PLAN,
                      file_path_str=file_path
                  )
              }
@@ -299,3 +323,30 @@ def generate_and_refine_ml_code(business_problem, file_path, max_refinements=3):
 
     print(f"\n--- Max refinements ({max_refinements}) reached. Returning last generated code. ---")
     return current_code
+
+# --- NEW FUNCTION TO SAVE ML CODE ---
+def save_ml_code_to_file(code, filename="ML.py"):
+    """Saves the generated ML code to a specific file in the scripts directory."""
+    # Define the target directory and ensure it's a raw string for Windows paths
+    save_dir = r"E:\AutoML\app\scripts"
+    # Define the specific filename
+    output_filename = filename # Use the provided filename, defaulting to ML.py
+
+    # Ensure the directory exists
+    try:
+        os.makedirs(save_dir, exist_ok=True)
+    except OSError as e:
+         print(f"❌ Error creating directory {save_dir}: {e}")
+         return # Exit if directory creation fails
+
+    # Combine the directory and filename to get the full path
+    file_path = os.path.join(save_dir, output_filename)
+    try:
+        with open(file_path, "w", encoding='utf-8') as f:
+            f.write(code)
+        print(f"✅ ML script saved successfully at: {file_path}")
+    except OSError as e: # Catch specific OS errors related to file paths/writing
+        print(f"❌ Error saving file to {file_path}: [Errno {e.errno}] {e.strerror}")
+        print(f"   Problematic path might be interpreted as: {repr(file_path)}")
+    except Exception as e: # Catch other potential errors
+        print(f"❌ An unexpected error occurred during file saving: {e}")

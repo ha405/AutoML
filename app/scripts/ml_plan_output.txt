@@ -1,20 +1,18 @@
 **EDA Summary**
-The EDA process resulted in a final data shape of (10127, 23) after preprocessing. Missing values were handled using median imputation for numeric columns and most frequent imputation for categorical columns. Categorical features were encoded using LabelEncoder for binary categorical variables and OneHotEncoder for multi-class categorical variables. Columns with high cardinality (> 10 unique values) were dropped. The feature 'Avg_Trans_Value' was engineered by dividing 'Total_Trans_Amt' by 'Total_Trans_Ct'.
+The EDA process resulted in a final dataset shape of (205, 36) after handling missing values, dropping duplicates, and preprocessing categorical features. Missing values were handled by imputing median values for numeric columns and most frequent values for categorical columns. Categorical features were encoded using LabelEncoder for binary variables and OneHotEncoder for variables with fewer than 10 unique values. The columns 'cylindernumber', 'carwidth', 'price', and 'car_ID' were dropped due to high cardinality or redundancy. A new feature 'power_per_volume' was engineered by dividing 'horsepower' by 'enginesize'.
 
 **Target Variable**
-The most likely target variable for the ML model is 'Attrition_Flag'.
+The target variable is 'price'.
 
 **ML Task Type**
-Based on the target variable 'Attrition_Flag', which is a binary categorical variable, the primary task is **Classification**. This is because the goal is to predict whether a customer will churn or not, which is a binary classification problem.
+The primary task is Regression, as the target variable 'price' is a continuous variable.
 
 **Recommended Model Types**
-Based on the ML task type and data characteristics, the following models are recommended:
-
-* **Logistic Regression**: A good baseline model for binary classification problems, which can provide interpretable results.
-* **Random Forest Classifier**: A robust model that can handle mixed data types and non-linear relationships, which can provide good accuracy.
-* **LightGBM Classifier**: An efficient model that can handle large datasets and provide good accuracy, which can be useful for this problem.
+1. **Linear Regression (baseline)**: A simple and interpretable model that can serve as a baseline for comparison with more complex models.
+2. **Random Forest Regressor (handles non-linearity)**: Can capture non-linear relationships between features and the target variable, and is robust to outliers.
+3. **Gradient Boosting Regressor (potential high accuracy)**: Can handle complex interactions between features and is known for its high accuracy in regression tasks.
 
 **Next Step Considerations**
-* Ensure that scaling is applied consistently to all features before training the models.
-* Pay attention to the feature 'Avg_Trans_Value' which was engineered during EDA, as it may be an important predictor of customer churn.
-* Consider using techniques such as feature selection or dimensionality reduction to reduce the feature space and improve model performance.
+* Ensure scaling is applied consistently to all features to prevent feature dominance.
+* Pay attention to the 'power_per_volume' feature, which may be an important predictor of the target variable.
+* Consider using techniques such as feature selection or dimensionality reduction to reduce the impact of high cardinality features.
