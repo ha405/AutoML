@@ -1,18 +1,18 @@
 **EDA Summary**
-The EDA process resulted in a final dataset shape of (205, 36) after handling missing values, dropping duplicates, and preprocessing categorical features. Missing values were handled by imputing median values for numeric columns and most frequent values for categorical columns. Categorical features were encoded using LabelEncoder for binary variables and OneHotEncoder for variables with fewer than 10 unique values. The columns 'cylindernumber', 'carwidth', 'price', and 'car_ID' were dropped due to high cardinality or redundancy. A new feature 'power_per_volume' was engineered by dividing 'horsepower' by 'enginesize'.
+The EDA process resulted in a final dataset shape of (205, 36) after handling missing values, encoding categorical features, and dropping insignificant columns. Missing values were handled by imputing median values for numeric columns and most frequent values for categorical columns. Categorical features were encoded using Label Encoding for binary variables and One-Hot Encoding for variables with fewer than 10 unique values. The columns 'car_ID', 'price', 'cylindernumber', 'carwidth', and 'doornumber' were dropped due to high cardinality or being identifiers. A new feature 'power_per_size' was engineered by dividing 'horsepower' by 'enginesize'.
 
 **Target Variable**
-The target variable is 'price'.
+The target variable is 'price', as it is the primary variable of interest for predicting car prices based on independent variables.
 
 **ML Task Type**
-The primary task is Regression, as the target variable 'price' is a continuous variable.
+The ML task type is Regression, as the target variable 'price' is continuous and the goal is to predict a numerical value. The business problem also involves optimizing profit, market share, and pricing strategies, which suggests a regression-based approach.
 
 **Recommended Model Types**
-1. **Linear Regression (baseline)**: A simple and interpretable model that can serve as a baseline for comparison with more complex models.
-2. **Random Forest Regressor (handles non-linearity)**: Can capture non-linear relationships between features and the target variable, and is robust to outliers.
-3. **Gradient Boosting Regressor (potential high accuracy)**: Can handle complex interactions between features and is known for its high accuracy in regression tasks.
+1. **Linear Regression**: A suitable baseline model for regression tasks, which can provide a simple and interpretable model for predicting car prices.
+2. **Random Forest Regressor**: A robust model that can handle non-linear relationships and mixed data types, which is suitable for this dataset with both numeric and categorical features.
+3. **Gradient Boosting Regressor**: A powerful model that can provide high accuracy and handle complex interactions between features, which is suitable for this dataset with a moderate number of features and rows.
 
 **Next Step Considerations**
-* Ensure scaling is applied consistently to all features to prevent feature dominance.
-* Pay attention to the 'power_per_volume' feature, which may be an important predictor of the target variable.
+* Ensure scaling is applied consistently to all numeric features to prevent feature dominance.
+* Pay attention to the 'power_per_size' feature, which may be an important predictor of car prices.
 * Consider using techniques such as feature selection or dimensionality reduction to reduce the impact of high cardinality features.

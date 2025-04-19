@@ -1,56 +1,47 @@
-Here is the corrected script:
-
-```
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
-from sklearn.preprocessing import StandardScaler, LabelEncoder, ColumnTransformer, SimpleImputer, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, LabelEncoder, SimpleImputer, ColumnTransformer, OneHotEncoder
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.svm import SVR
-from sklearn.neural_network import MLPRegressor
-from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, classification_report, mean_absolute_error
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.compose import make_column_selector as selector
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import make_pipeline
 import shap
-from sklearn.pipeline import Pipeline
 
 try:
     df_original = pd.read_csv(r"E:\\AutoML\\processed_sales_data_sample.csv")
-except FileNotFoundError as e:
-    print(f"Error: {e}")
+except FileNotFoundError:
+    print("Error: Unable to read processed CSV file.")
     exit()
 
 df = df_original.copy()
 
 target_column = 'price'
-print(f"Target column: {target_column}")
+print("Target column:", target_column)
 
-non_feature_columns = ['car_ID']
-df.drop(non_feature_columns, axis=1, inplace=True)
+df.drop(['car_ID'], axis=1, inplace=True)
 
-# Basic missing value imputation (if necessary)
-df.fillna(df.median(), inplace=True)
+from sklearn.impute import SimpleImputer
+imputer = SimpleImputer(strategy='median')
+df[['horsepower', 'enginesize']] = imputer.fit_transform(df[['horsepower', 'enginesize']])
+df['power_per_size'] = df['horsepower'] / df['enginesize']
 
 task_type = 'Regression'
-print(f"Inferred task type: {task_type}")
+print("Task type:", task_type)
 
-X = df.drop(target_column, axis=1)
-y = df[target_column]
+X = df.drop(['price'], axis=1)
+y = df['price']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 numeric_features = X_train.select_dtypes(include=['int64', 'float64']).columns
 categorical_features = X_train.select_dtypes(include=['object']).columns
 
-numeric_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
-])
-
-categorical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
-])
+numeric_transformer = make_pipeline(SimpleImputer(strategy='median'), StandardScaler())
+categorical_transformer = make_pipeline(SimpleImputer(strategy='most_frequent'), OneHotEncoder(handle_unknown='ignore', sparse_output=False))
 
 preprocessor = ColumnTransformer(
     transformers=[
@@ -62,34 +53,25 @@ preprocessor = ColumnTransformer(
 X_train_processed = preprocessor.fit_transform(X_train)
 X_test_processed = preprocessor.transform(X_test)
 
-feature_names = preprocessor.named_transformers_['num'].named_steps['scaler'].feature_names_in_
+models = [LinearRegression(), DecisionTreeRegressor(random_state=42), RandomForestRegressor(random_state=42)]
 
-models = [LinearRegression(), DecisionTreeRegressor(), RandomForestRegressor()]
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-scores = []
 for model in models:
-    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
-    score = cross_val_score(model, X_train_processed, y_train, cv=kfold, scoring='neg_mean_squared_error')
-    scores.append((model.__class__.__name__, np.mean(score), np.std(score)))
+    scores = cross_val_score(model, X_train_processed, y_train, cv=kf, scoring='neg_mean_squared_error')
+    print(f"Model: {model.__class__.__name__}, Mean MSE: {np.mean(scores):.2f}, Std MSE: {np.std(scores):.2f}")
 
-best_model_name, _, _ = max(scores, key=lambda x: x[1])
-best_model = None
-for model in models:
-    if model.__class__.__name__ == best_model_name:
-        best_model = model
-        break
-
+best_model = RandomForestRegressor(random_state=42)
 best_model.fit(X_train_processed, y_train)
 
 y_pred = best_model.predict(X_test_processed)
 
-print(f"Final model: {best_model.__class__.__name__}")
-print(f"Mean Absolute Error: {mean_absolute_error(y_test, y_pred):.3f}")
-print(f"Mean Squared Error: {mean_squared_error(y_test, y_pred):.3f}")
-print(f"R2 Score: {r2_score(y_test, y_pred):.3f}")
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+print(f"Final Model: {best_model.__class__.__name__}, MSE: {mse:.2f}, R2: {r2:.2f}")
 
-if hasattr(best_model, 'feature_importances_'):
-    importances = best_model.feature_importances_
-    print("Feature Importances:")
-    for feature, importance in zip(feature_names, importances):
-        print(f"{feature}: {importance:.3f}")
+importances = best_model.feature_importances_
+feature_names = preprocessor.get_feature_names_out()
+print("Feature Importances:")
+for feature, importance in sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)[:10]:
+    print(f"{feature}: {importance:.2f}")
