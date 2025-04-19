@@ -30,7 +30,6 @@ Generate a Python script that performs the following steps in order:
 1.  **Imports:** Import necessary libraries: `pandas`, `numpy`. Also import needed classes from `sklearn.impute` and `sklearn.preprocessing`. Do NOT import visualization libraries like matplotlib or seaborn.
 2.  **Load Data:**
     *   Load the CSV file from the path specified in `<target_file_path>`.
-    *   Immediately create a copy to avoid modifying the original DataFrame (`df = pd.read_csv(r"{file_path_str}").copy()`). Handle potential FileNotFoundError.
 3.  **Initial Inspection (Print Outputs):**
     *   Print the DataFrame shape: `print(f"DataFrame Shape: {{df.shape}}")`
     *   Print the column names: `print(f"Columns: {{df.columns.tolist()}}")`
@@ -68,6 +67,7 @@ Generate a Python script that performs the following steps in order:
     *   Print the final shape: `print(f"Final Processed Shape: {{df.shape}}")`
     *   Print final data types: `print("Final Data Types:\n", df.dtypes)` Check for remaining 'object' types.
     *   Print summary statistics: `print("Summary Statistics (Processed Data):\n", df.describe(include='all'))`
+10.  **Save the dataframe to the original file path.**
 
 **Output Format:**
 *   Your response MUST contain ONLY the raw Python code for the script.

@@ -32,6 +32,9 @@ Note: The code should literally start off with the import statements. Don't incl
 {ml_guide}
 </ml_plan>
 
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
+
+
 **Instructions for Python Script Generation:**
 
 Generate a Python script that performs the following steps IN ORDER:
@@ -98,11 +101,15 @@ VERY IMPORTANT: The code shouldnt contain anything like "Here is corrected code"
 AND: It shouldn't contain any introductory or concluding remarks about code either as no text is needed. ONLY RAW PYTHON CODE
 
 The code should literally start off with the import statements. Don't include any introduction like "Here is the corrected script"
+
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
 """
 
 SYSTEM_INSTRUCTION_ML_REFLECTOR_TEMPLATE = r"""
 You are an expert Python code reviewer and AI/ML Quality Assurance specialist.
 Your task is to meticulously review the provided Python script intended for building a machine learning pipeline.
+
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
 
 **Context:**
 The script was generated based on the following requirements summarized below:
@@ -119,8 +126,13 @@ The script was generated based on the following requirements summarized below:
 {ml_guide}
 </ml_plan>
 
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
+
 **Review Criteria:**
 
+0. **ONLY PYTHON CODE, NO TEXT**
+    * The code shouldnt contain anything like "Here is corrected code". 
+    * It should ONLY contain code, no comments, nothing else. just python code
 1.  **Correctness & Logic:**
     *   Does the code run without syntax errors?
     *   Is the file loaded correctly using the specified path (`{file_path_str}`)? Is `FileNotFoundError` handled?
@@ -150,8 +162,10 @@ The script was generated based on the following requirements summarized below:
 
 Note: The code should literally start off with the import statements. Don't include any introduction like "Here is the corrected script". 
 
+Important: The code shouldnt contain anything like "Here is corrected code". It should ONLY contain code, no comments, nothing else. just python code
+
 **Output:**
-*   If the script meets all criteria, appears logically sound, and is likely to run correctly, respond ONLY with: `<OK>`
+*   If the script meets all criteria, appears logically sound, and is likely to run correctly, respond ONLY with: `<OK>`. NOTHING ELSE
 Note: The code should literally start off with the import statements. Don't include any introduction like "Here is the corrected script". 
 *   Otherwise, provide concise, constructive feedback listing the specific issues found and suggest exact corrections needed. Be specific (e.g., "Line 45: Preprocessing pipeline should be fitted only on X_train, not the whole X."). Do NOT provide the fully corrected code, only the feedback/corrections list. Start feedback with "Issues found:".
 """
