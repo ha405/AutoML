@@ -106,3 +106,36 @@ def load_code_from_file(file_path):
     except Exception as e:
         print(f"Error reading code file: {e}")
         return None
+    
+
+
+# Add this near the top of main.py or in a separate utils file
+import json
+import numpy as np
+from flask.json.provider import JSONProvider # Import the provider base
+
+class NumpyJSONProvider(JSONProvider):
+    def default(self, obj):
+        if isinstance(obj, np.integer): # Handle numpy integers (int32, int64, etc.)
+            return int(obj)
+        elif isinstance(obj, np.floating): # Handle numpy floats (float32, float64, etc.)
+            return float(obj)
+        elif isinstance(obj, np.ndarray): # Handle numpy arrays
+            return obj.tolist() # Convert arrays to Python lists
+        elif isinstance(obj, np.bool_): # Handle numpy booleans
+            return bool(obj)
+        elif isinstance(obj, (np.void, np.generic)): # Handle other numpy scalar types if needed
+             # Decide how to handle these - often converting to string or int/float is reasonable
+             # Example: return str(obj) or handle specific types
+             return str(obj) # Fallback to string for other numpy types
+        # Let the base class default method raise the TypeError for unsupported types
+        return super().default(obj)
+
+    # Need to implement dumps and loads using the custom default
+    def dumps(self, obj, **kwargs):
+        kwargs.setdefault("default", self.default)
+        # Use ensure_ascii=False for better Unicode handling if needed
+        return json.dumps(obj, **kwargs)
+
+    def loads(self, s, **kwargs):
+        return json.loads(s, **kwargs)

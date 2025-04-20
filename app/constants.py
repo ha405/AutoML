@@ -1,7 +1,7 @@
 import os
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 AUTOML_ROOT_DIR = os.path.abspath(os.path.join(APP_DIR, os.pardir))
-
+print(AUTOML_ROOT_DIR)
 DATASET_PATH = os.path.join(AUTOML_ROOT_DIR, "TestDatasets", "Input.csv")
 PROCESSED_DATASET_PATH = os.path.join(AUTOML_ROOT_DIR, "TestDatasets", "Input_processed.csv") # Assuming name
 

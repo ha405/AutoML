@@ -366,27 +366,24 @@ Output ONLY the fully revised, raw Python code.
     return current_code
 
 import re
-def save_ml_code_to_file(code: str, file_path: str, filename: str = "ML.py") -> bool:
+def save_ml_code_to_file(code: str, file_path: str) -> bool:
     """
-    Saves the provided ML script code to a Python file after stripping any markdown code fences.
+    Saves the provided ML script code to the specified file path after stripping any markdown code fences.
 
     Args:
         code (str): The ML script code, possibly containing markdown-style fences.
-        file_path (str): The directory where the file should be saved.
-        filename (str): The filename to use for saving (default is 'ML.py').
+        file_path (str): The full path (including filename) where the file should be saved.
 
     Returns:
         bool: True if saved successfully.
     """
-    # Remove markdown-style fences like ``` or ```python
     cleaned_code = re.sub(r"^```[\w+\-]*\s*", "", code.strip(), flags=re.IGNORECASE)
     cleaned_code = re.sub(r"\n?```$", "", cleaned_code.strip())
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    os.makedirs(file_path, exist_ok=True)
-    full_path = os.path.join(file_path, filename)
-
-    with open(full_path, "w", encoding="utf-8") as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(cleaned_code)
 
-    print(f"ML script saved successfully at: {full_path}")
+    print(f"ML script saved successfully at: {file_path}")
     return True
+

@@ -3,7 +3,7 @@ import sys
 import subprocess
 
 from flask import Flask, request, session, jsonify, send_from_directory
-from routes import feedback, MachineLearning, data_analysis, AnalysisPlanner, visualization_planner, visualization_generator, eda_fix
+from routes import feedback, MachineLearning, data_analysis, AnalysisPlanner, visualization_planner, visualization_generator, eda_fix, ml_fix
 from utils import filepreprocess, load_code_from_file, load_logs_from_file
 from constants import (
     DATASET_PATH,
@@ -26,9 +26,15 @@ def api_home():
     prompt = request.form.get("queryInput")
     upload = request.files.get("file-upload")
 
-    if upload and upload.filename:
-        os.makedirs(os.path.dirname(DATASET_PATH), exist_ok=True)
+    if upload:
+        print(f"[DEBUG] Upload received: {upload.filename}")  # 👈 Add logging
+        print(f"[DEBUG] Saving to: {DATASET_PATH}")  # 👈 Check path before saving
+
+        # os.makedirs(os.path.dirname(DATASET_PATH), exist_ok=True)
         upload.save(DATASET_PATH)
+
+        print(f"[DEBUG] File saved successfully.")
+
         filedetails = filepreprocess(DATASET_PATH)
         if filedetails.get("error"):
             return jsonify(error=filedetails["error"]), 400
@@ -59,6 +65,7 @@ def api_home():
         "filedetails": filedetails,
         "final_problem": session.get("final_problem")
     }), 200
+
 
 @app.route("/api/conversation", methods=["GET", "POST"])
 def api_conversation():
@@ -105,6 +112,7 @@ def api_conversation():
 
 MAX_ATTEMPTS = 5  # Maximum number of execution attempts
 MAX_FIX_ATTEMPTS = 3  # Maximum number of fix attempts per execution failure
+import time
 
 @app.route("/api/dataanalysis", methods=["POST"])
 def api_dataanalysis():
@@ -248,36 +256,202 @@ def api_superllm():
         f.write(plan)
     return jsonify(status="plan_generated")
 
+MAX_ML_EXEC_ATTEMPTS = 5 
+MAX_ML_FIX_ATTEMPTS = 3  
+
 @app.route("/api/ml", methods=["POST"])
 def api_ml():
     final_problem = session.get("final_problem")
-    if not final_problem or not os.path.exists(OUTPUT_PLAN_FILE):
+    ml_plan = None
+    processed_dataset_details = None
+
+    # Define Paths
+    processed_dataset_full_path = os.path.abspath(PROCESSED_DATASET_PATH)
+    ml_plan_full_path = os.path.abspath(OUTPUT_PLAN_FILE)
+    ml_code_full_path = os.path.abspath(ML_CODE_FILE_PATH)
+    ml_logs_full_path = os.path.abspath(ML_OUTPUT_LOGS_FILE)
+
+    # Input Validation
+    if not final_problem:
+        app.logger.error("ML execution request failed: Final business problem not found in session.")
+        return jsonify(error="Business problem definition unavailable."), 400
+    if not os.path.exists(ml_plan_full_path):
+        app.logger.error(f"ML execution request failed: ML plan file not found at {ml_plan_full_path}")
         return jsonify(error="No ML plan available."), 400
 
-    new_details = filepreprocess(PROCESSED_DATASET_PATH)
-    if new_details.get("error"):
-        return jsonify(error=new_details["error"]), 500
+    # Check Processed Data
+    app.logger.info(f"Checking for processed dataset at: {processed_dataset_full_path}")
+    if not os.path.exists(processed_dataset_full_path):
+         app.logger.error(f"ML execution failed: Processed dataset not found at {processed_dataset_full_path}. Did EDA run and save correctly?")
+         return jsonify(error="Processed dataset not found. Please ensure EDA completed successfully."), 400
+    try:
+        processed_dataset_details = filepreprocess(processed_dataset_full_path)
+        if processed_dataset_details.get("error"):
+            app.logger.error(f"Error preprocessing the processed dataset: {processed_dataset_details['error']}")
+            return jsonify(error=f"Error reading processed dataset: {processed_dataset_details['error']}"), 500
+        app.logger.info("Successfully loaded details for processed dataset.")
+    except Exception as e:
+        app.logger.error(f"Unexpected error during processed dataset preprocessing: {e}", exc_info=True)
+        return jsonify(error="Failed to read processed dataset details.", details=str(e)), 500
 
-    plan = open(OUTPUT_PLAN_FILE).read()
+    # Load ML Plan
+    try:
+        with open(ml_plan_full_path, 'r', encoding='utf-8') as f:
+            ml_plan = f.read()
+        if not ml_plan:
+             app.logger.error("ML Plan file is empty.")
+             return jsonify(error="ML Plan is empty."), 500
+        app.logger.info("Successfully loaded ML plan.")
+    except Exception as e:
+        app.logger.error(f"Failed to read ML plan file: {e}", exc_info=True)
+        return jsonify(error="Failed to read ML plan.", details=str(e)), 500
+
+    # --- Generate Initial ML Code ---
+    app.logger.info("Generating initial ML code...")
     ml_code = MachineLearning.generate_and_refine_ml_code(
         business_problem=final_problem,
-        file_path=DATASET_PATH,
-        ML_PLAN=plan
+        file_path=processed_dataset_full_path, # Pass the PROCESSED path
+        ML_PLAN=ml_plan
     )
     if not ml_code or ml_code.startswith("# Error"):
-        return jsonify(error="ML code generation failed."), 500
-    MachineLearning.save_ml_code_to_file(ml_code, ML_CODE_FILE_PATH)
+        app.logger.error(f"ML code generation failed. Reason: {ml_code}")
+        return jsonify(error="ML code generation failed.", details=ml_code), 500
 
-    result = subprocess.run(
-        [sys.executable, ML_CODE_FILE_PATH],
-        capture_output=True, text=True
-    )
-    os.makedirs(os.path.dirname(ML_OUTPUT_LOGS_FILE), exist_ok=True)
-    with open(ML_OUTPUT_LOGS_FILE, 'w') as log:
-        log.write(f"--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}")
-    session["ml_output_logs"] = result.stdout + result.stderr
-    status = "success" if result.returncode == 0 else "error"
-    return jsonify(status=status)
+    if not MachineLearning.save_ml_code_to_file(ml_code, ml_code_full_path):
+        app.logger.error(f"Failed to save initial ML code to {ml_code_full_path}")
+        return jsonify(error="Failed to save generated ML code."), 500
+    app.logger.info(f"Initial ML code saved to {ml_code_full_path}")
+
+    # --- Execute and Auto-Fix Loop ---
+    attempts = 0
+    last_error_output = "No execution attempts made yet."
+
+    while attempts < MAX_ML_EXEC_ATTEMPTS:
+        attempts += 1
+        app.logger.info(f"--- Starting ML Code Execution Attempt #{attempts}/{MAX_ML_EXEC_ATTEMPTS} ---")
+        app.logger.info(f"Running script: {ml_code_full_path}")
+
+        result = None
+        try:
+            # Execute the current ML script
+            result = subprocess.run(
+                [sys.executable, ml_code_full_path],
+                capture_output=True, text=True, check=False,
+                timeout=300 # 5 min timeout
+            )
+
+            # Save Logs
+            os.makedirs(os.path.dirname(ml_logs_full_path), exist_ok=True)
+            log_content = f"--- Execution Attempt #{attempts} ---\nReturn Code: {result.returncode}\n--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}\n" + "="*20 + "\n"
+            with open(ml_logs_full_path, 'a', encoding='utf-8') as log:
+                log.write(log_content)
+            session["ml_output_logs"] = f"Attempt #{attempts}:\n" + result.stdout + "\n" + result.stderr
+            app.logger.info(f"Execution attempt #{attempts} completed. Logs saved.")
+
+            # Check Execution Result
+            if result.returncode == 0:
+                app.logger.info(f"ML code executed successfully on attempt #{attempts}.")
+                app.logger.debug(f"Success STDOUT:\n{result.stdout}")
+                return jsonify(status="success", output=result.stdout, logs_path=ml_logs_full_path), 200
+
+            # --- Execution Failed ---
+            app.logger.warning(f"Attempt #{attempts}: ML execution failed (Code: {result.returncode}).")
+            app.logger.debug(f"Failed STDOUT:\n{result.stdout}")
+            app.logger.debug(f"Failed STDERR:\n{result.stderr}")
+            last_error_output = result.stderr if result.stderr else result.stdout
+
+            # Check if max execution attempts reached AFTER logging failure
+            if attempts >= MAX_ML_EXEC_ATTEMPTS:
+                app.logger.error(f"ML execution failed after maximum ({MAX_ML_EXEC_ATTEMPTS}) attempts.")
+                break # Exit outer loop to return final error
+
+            # <<< --- START OF NESTED FIXER LOOP --- >>>
+            fix_attempts = 0
+            fixed_code = None # Reset fixed_code for this execution attempt
+            while fix_attempts < MAX_ML_FIX_ATTEMPTS:
+                fix_attempts += 1
+                app.logger.info(f"Attempting ML code correction (Exec Attempt #{attempts}, Fix Attempt #{fix_attempts}/{MAX_ML_FIX_ATTEMPTS})...")
+                try:
+                    # Read the code that just failed
+                    with open(ml_code_full_path, "r", encoding='utf-8') as f:
+                        failing_code = f.read()
+
+                    # Call the ML fixer function
+                    fixed_code = ml_fix.attempt_ml_code_fix(
+                        broken_ml_code=failing_code,
+                        error_message=last_error_output,
+                        dataset_path=processed_dataset_full_path, # Pass processed path
+                        business_goal=final_problem,
+                        ml_script_summary=ml_plan # Pass plan as summary
+                    )
+
+                    if fixed_code:
+                         app.logger.info(f"ML code fix suggested by AI on fix attempt #{fix_attempts}.")
+                         app.logger.debug(f"Suggested Fix Snippet:\n{fixed_code[:500]}...")
+                         break # <<< EXIT INNER FIXER LOOP on success
+                    else:
+                         app.logger.warning(f"ML fix attempt #{fix_attempts} returned no code.")
+                         # Optional: Add a small delay before retrying the fixer
+                         # time.sleep(2)
+
+                except Exception as fix_call_err:
+                    app.logger.error(f"Attempt #{attempts}, Fix Attempt #{fix_attempts}: Error during call to attempt_ml_code_fix: {fix_call_err}", exc_info=True)
+                    # Optional: Add a longer delay if the fixer itself errors
+                    # time.sleep(5)
+
+            # --- AFTER INNER FIXER LOOP ---
+            if not fixed_code:
+                app.logger.error(f"Failed to obtain an ML fix after {MAX_ML_FIX_ATTEMPTS} attempts for execution attempt #{attempts}.")
+                app.logger.info("Proceeding to next execution attempt (if any remain)...")
+                # <<< CONTINUE to the next outer loop attempt, DON'T break <<<
+                continue # Go to the next iteration of the 'while attempts < MAX_ML_EXEC_ATTEMPTS' loop
+
+            # --- Fixer Succeeded ---
+            # Overwrite the script with the fixed version
+            if not MachineLearning.save_ml_code_to_file(fixed_code, ml_code_full_path):
+                 app.logger.error(f"Attempt #{attempts}: Critical error - failed to save the fixed ML code to {ml_code_full_path}. Aborting.")
+                 # If saving fails, we have to stop.
+                 return jsonify(error="Failed to save the corrected ML code.", details="Check file permissions and path."), 500
+            app.logger.info(f"Attempt #{attempts}: Fixed ML code saved. Retrying execution in the next outer loop iteration.")
+            # The outer loop will now continue with the fixed code
+
+
+        except subprocess.TimeoutExpired:
+            # attempts counter already incremented at start of loop
+            error_details = f"Script at {ml_code_full_path} exceeded timeout ({300}s)."
+            app.logger.error(f"Attempt #{attempts}: ML script execution timed out.")
+            last_error_output = error_details
+            # Save timeout info to logs
+            os.makedirs(os.path.dirname(ml_logs_full_path), exist_ok=True)
+            with open(ml_logs_full_path, 'a', encoding='utf-8') as log:
+                 log.write(f"--- Execution Attempt #{attempts} ---\nReturn Code: TIMEOUT\nError: {error_details}\n" + "="*20 + "\n")
+            session["ml_output_logs"] = f"Attempt #{attempts}: Timeout - {error_details}"
+            if attempts >= MAX_ML_EXEC_ATTEMPTS:
+                 app.logger.error(f"ML code execution failed due to timeout after maximum ({MAX_ML_EXEC_ATTEMPTS}) attempts.")
+                 break # Exit outer loop
+            app.logger.info("Continuing to next attempt after timeout...")
+            continue # Go to next attempt
+
+        except Exception as subproc_err:
+            # attempts counter already incremented at start of loop
+            error_details = str(subproc_err)
+            app.logger.error(f"Attempt #{attempts}: Error running ML subprocess: {subproc_err}", exc_info=True)
+            last_error_output = f"Subprocess execution error: {error_details}"
+             # Save error info to logs
+            os.makedirs(os.path.dirname(ml_logs_full_path), exist_ok=True)
+            with open(ml_logs_full_path, 'a', encoding='utf-8') as log:
+                 log.write(f"--- Execution Attempt #{attempts} ---\nReturn Code: SUBPROCESS_ERROR\nError: {error_details}\n" + "="*20 + "\n")
+            session["ml_output_logs"] = f"Attempt #{attempts}: Subprocess Error - {error_details}"
+            # Exit loop on unexpected subprocess error
+            break
+
+
+    # --- Loop Finished ---
+    app.logger.error(f"ML code execution failed permanently after {attempts} attempt(s). Check logs: {ml_logs_full_path}")
+    return jsonify(
+        error=f"ML code execution failed after {attempts} attempt(s).",
+        details=last_error_output # Return the last captured error
+    ), 500
 
 @app.route("/api/visualizationplanning", methods=["POST"])
 def api_visualization_planning():
