@@ -1,0 +1,20 @@
+/* src/global_css.css - FINAL MINIMAL VERSION */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    /* Set ONLY the base font application-wide */
+    font-family: 'Space Grotesk', sans-serif;
+    /* Very basic fallback background, will be overridden by components */
+    /* background-color: #0f0f1a; */
+    /* Base text color (can also be overridden) */
+    color: #e8eaf0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* DO NOT add height: 100% or flexbox styles here */
