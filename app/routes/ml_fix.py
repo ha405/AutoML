@@ -4,6 +4,7 @@ import re
 import time
 import traceback
 
+# --- Attempt to import google.generativeai ---
 try:
     import google.generativeai as genai
     print(f"INFO ({__file__}): Successfully imported google.generativeai.", file=sys.stderr)
@@ -11,110 +12,134 @@ except ImportError:
     print(f"WARNING ({__file__}): google.generativeai not installed. ML code fixing disabled.", file=sys.stderr)
     genai = None
 
+# --- Global Client Initialization Block ---
 genai_client = None
 if genai:
     try:
-        # Use environment variable, raise error if not set (no default placeholder)
-        GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+        GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY")
         if not GEMINI_API_KEY:
-            # Provide a more specific placeholder or raise error immediately
-            # Using a placeholder here for demonstration, but raising error is safer
-            GEMINI_API_KEY="AIzaSyBoAFOxBSX1nxEF8lNuhJudPiHVTCRNK8Q" # Replace with your actual key or ensure env var is set
-            print(f"WARNING ({__file__}): GEMINI_API_KEY not set in environment variables. Using placeholder key.", file=sys.stderr)
-            # raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not set.") # Safer alternative
+            GEMINI_API_KEY="AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ" # Fallback placeholder
+            print(f"WARNING ({__file__}): GOOGLE_API_KEY not set in environment variables. Using placeholder key.", file=sys.stderr)
 
         genai.configure(api_key=GEMINI_API_KEY)
-        # Use a capable model, e.g., 1.5 Flash or adjust as needed
         MODEL_NAME = "gemini-1.5-flash"
-        genai_client = genai.GenerativeModel(MODEL_NAME)
-        print(f"INFO ({__file__}): Gemini client configured using model {MODEL_NAME}.", file=sys.stderr)
+        # Relax safety slightly for code generation/fixing if needed
+        safety_settings = [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        ]
+        genai_client = genai.GenerativeModel(MODEL_NAME, safety_settings=safety_settings)
+        print(f"INFO ({__file__}): Gemini client configured for ML fix using model {MODEL_NAME}.", file=sys.stderr)
 
     except ValueError as ve:
          print(f"ERROR ({__file__}): Configuration failed: {ve}", file=sys.stderr)
          genai_client = None
     except Exception as e:
-        print(f"ERROR ({__file__}): Error setting up Gemini client: {e}", file=sys.stderr)
+        print(f"ERROR ({__file__}): Error setting up Gemini client for ML fix: {e}", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
         genai_client = None
 else:
+     print(f"INFO ({__file__}): google.generativeai library not available. ML Fix Client not configured.", file=sys.stderr)
      genai_client = None
 
 
 def clean_llm_code_output(raw_code: str) -> str:
+    """Strips Markdown code fences and potential leading text."""
     if not raw_code:
         return ""
-
-    cleaned_text = raw_code.strip()
-    code_block_pattern = r"```(?:[a-zA-Z0-9_.-]+)?\s*\n(.*?)\n```"
-    match = re.search(code_block_pattern, cleaned_text, re.DOTALL | re.IGNORECASE)
-
-    if match:
-        final_code = match.group(1).strip()
-    else:
-        final_code = re.sub(r"^(here's|here is) the (python )?code:?\s*\n", "", cleaned_text, flags=re.IGNORECASE).strip()
-        final_code = re.sub(r'^```(?:[a-zA-Z0-9_.-]+)?\s*\n?', '', final_code, flags=re.IGNORECASE)
-        final_code = re.sub(r'\n?```\s*$', '', final_code)
-        final_code = final_code.strip()
-
-    return final_code
+    cleaned = raw_code.strip()
+    if cleaned.startswith("```python"):
+        cleaned = cleaned[len("```python"):].strip()
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[len("```"):].strip()
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3].strip()
+    cleaned = re.sub(r"^(here's|here is)\s+(the\s+)?(corrected|fixed|python\s+)?code:?\s*\n", "", cleaned, flags=re.IGNORECASE).strip()
+    return cleaned
 
 
 def attempt_ml_code_fix(
     broken_ml_code: str,
     error_message: str,
-    dataset_path: str,
+    dataset_path: str,        # Path to PROCESSED dataset
     business_goal: str,
-    ml_script_summary: str # Consider if this is needed or if file_details are better
+    ml_plan: str,             # ML plan content
+    eda_output_logs: str      # EDA execution logs
 ) -> str | None:
-
+    """Attempts to fix the failing ML code, specifically handling data type errors from incomplete EDA."""
     global genai_client
     if not genai_client:
         print(f"ERROR ({__file__}): Gemini client not available. Cannot fix ML code.", file=sys.stderr)
         return None
 
+    # Input validation
     if not broken_ml_code:
         print(f"WARNING ({__file__}): Missing failing ML code string. Aborting fix.", file=sys.stderr)
         return None
     if not error_message:
          print(f"WARNING ({__file__}): Missing error message string. Aborting fix.", file=sys.stderr)
          return None
+    if not ml_plan:
+         print(f"WARNING ({__file__}): Missing ML Plan context. Fix quality may be reduced.", file=sys.stderr)
+         ml_plan = "# ML Plan not provided."
+    if not eda_output_logs:
+         print(f"WARNING ({__file__}): Missing EDA Output Logs context. Fix quality may be reduced.", file=sys.stderr)
+         eda_output_logs = "# EDA Logs not provided."
 
+    # Limit context snippets
+    error_snippet = error_message[:3000] # Allow more error context
+    plan_snippet = ml_plan[:1500]
+    eda_logs_snippet = eda_output_logs[:3000]
 
-    error_snippet = error_message[:2500] # Increased snippet size slightly
-    script_snippet = ml_script_summary[:1500] # Increased snippet size slightly
-
-    # Enhanced Prompt with clearer instructions and structure
+    # --- Enhanced Prompt with Specific Handling for Data Type Errors ---
     prompt = f"""
 You are an expert Python machine learning engineer specializing in debugging and correcting code.
-Your task is to analyze the provided failing ML script, error message, and context, then provide a fully corrected version of the script.
+Your task is to analyze the provided failing ML script, error message, and context (ML plan, EDA logs), then provide a fully corrected version of the script.
 
 **Input Analysis:**
 1.  **Failing ML Code:** The Python script provided below.
 2.  **Error Output:** The traceback or error message generated by the script.
-3.  **Context:** Includes the dataset path, business goal, and potentially relevant details about the script's structure or intent.
+3.  **Context:** Processed dataset path, business goal, ML plan, and **EDA output logs** (showing the final state of the data loaded from '{dataset_path}').
 
 **Correction Requirements:**
 1.  **Address the Root Cause:** Identify and fix the specific error indicated in the 'Error Output'.
-2.  **Maintain Intent:** Ensure the corrected script still aims to achieve the original 'Business Goal' using the data from 'Dataset Path'.
-3.  **Robustness Checks:**
+2.  **Maintain Intent & Plan:** Ensure the corrected script still aims to achieve the 'Business Goal' and aligns with the 'ML Plan' regarding models, metrics, etc.
+3.  **Use EDA Log Insights:** Cross-reference 'EDA Output Logs' (final columns, dtypes, shape) to ensure the ML script correctly handles the data state *as it was saved by EDA*.
+4.  **Handle Data Type Errors (CRITICAL):*
+    *   **If the 'Error Output' is a `ValueError` like "could not convert string to float" (e.g., 'four', 'Yes', etc.)**:
+        *   Check the 'EDA Output Logs' (specifically the "Final Data Types" or "Remaining Object Columns" sections) to confirm if the problematic column was indeed left as non-numeric ('object') after EDA.
+        *   If confirmed, **you MUST insert the necessary data conversion step into the corrected ML script** right after loading the data and *before* defining X/y or splitting. Examples:
+            *   For number words (like 'two', 'four'): Use a dictionary mapping and `.map()` on the specific column (e.g., `df['cylindernumber'] = df['cylindernumber'].map({{'two': 2, 'four': 4, ...}})`). Handle potential unmapped values with `.fillna()` using the mode after mapping.
+            *   For other unexpected strings in supposedly numeric columns: Attempt `pd.to_numeric(df['column'], errors='coerce')` and then impute the resulting NaNs (e.g., with the median).
+        *   This is an exception to avoid modifying the processed data *again* in the ML script, but it's necessary to make *this* script runnable when EDA preprocessing was incomplete.
+5.  **Standard Robustness Checks:**
     *   Verify correct dataset loading (`pd.read_csv(r"{dataset_path}")`), handling `FileNotFoundError`.
-    *   Before imputation or transformation (e.g., in `ColumnTransformer`), ensure column lists (numeric/categorical) are correctly identified and handle cases where one might be empty. Check columns exist in the DataFrame.
-    *   Use `stratify=y` in `train_test_split` ONLY for classification tasks.
-    *   Apply `LabelEncoder` to the target variable ONLY if it's a classification task AND the target is non-numeric.
-    *   Ensure pipelines (`Pipeline`, `ColumnTransformer`) are fitted ONLY on training data.
-4.  **Output:** Print meaningful results (e.g., cross-validation scores, final test set metrics).
+    *   Ensure correct target variable ID and preparation (check plan/logs).
+    *   Ensure feature set (X) definition aligns with columns present after EDA (check logs).
+    *   Apply `stratify=y` in `train_test_split` only for classification (check plan/target type).
+    *   Use correct evaluation metrics (check plan).
+    *   Ensure models/pipelines are fitted ONLY on training data.
+    *   Avoid redundant preprocessing (like scaling) if EDA logs indicate it was already done.
+6.  **Output:** Print meaningful results as intended by the original script and ML Plan. Save the final model.
 
 **Output Format:**
 -   **CRITICAL:** Respond ONLY with the raw Python code of the fully corrected script.
--   The script MUST start *directly* with the `import` statements.
--   Do NOT include any introductory text (e.g., "Here is the corrected code...").
--   Do NOT include any comments unless absolutely necessary for understanding a complex choice.
--   Do NOT include markdown formatting (```python ... ```).
+-   Start DIRECTLY with `import` statements. NO introduction.
+-   NO comments unless absolutely necessary (e.g., explaining an assumption for mapping).
+-   NO markdown formatting (```python ... ```).
 
 **Context:**
--   Dataset Path: '{dataset_path}'
+-   Processed Dataset Path: '{dataset_path}'
 -   Business Goal: '{business_goal}'
--   ML Script Summary Snippet: {script_snippet}{'...' if len(ml_script_summary) > 1500 else ''}
+-   ML Plan Snippet: {plan_snippet}{'...' if len(ml_plan) > 1500 else ''}
+-   EDA Output Logs Snippet:
+<eda_output_logs>
+{eda_logs_snippet}{'...' if len(eda_output_logs) > 3000 else ''}
+</eda_output_logs>
 
-**Error Output:**
+**Failing Python Code:**
+```python
+{broken_ml_code}
 """

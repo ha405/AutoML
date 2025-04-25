@@ -1,225 +1,38 @@
 --- Execution Attempt #1 ---
-Return Code: 1
+Return Code: 0
 --- stdout ---
 Target column: price
+Cross-validation results:
+Model: LinearRegression
+RMSE: 0.3786 (+/- 0.1100)
+Model: DummyRegressor
+RMSE: 0.9472 (+/- 0.1934)
+Model: RandomForestRegressor
+RMSE: 0.2604 (+/- 0.0597)
+Model: GradientBoostingRegressor
+RMSE: 0.2529 (+/- 0.0522)
+
+Best model: GradientBoostingRegressor
+
+Test set evaluation:
+RMSE: 0.3686
+MAE: 0.2506
+R-squared: 0.8941
+
+Feature Importances:
+enginesize             0.604379
+curbweight             0.105601
+highwaympg             0.081537
+horsepower             0.068870
+cylindernumber_four    0.041262
+carlength              0.023232
+carwidth               0.019020
+wheelbase              0.018765
+peakrpm                0.007065
+carbody_convertible    0.005725
+dtype: float64
+Trained model saved as trained_model.joblib
 
 --- stderr ---
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 24, in <module>
-    df = df.dropna(subset=[target_column])
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 6670, in dropna
-    raise KeyError(np.array(subset)[check].tolist())
-KeyError: ['price']
-
-====================
---- Execution Attempt #2 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 24, in <module>
-    df = df.dropna(subset=[target_column])
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 6670, in dropna
-    raise KeyError(np.array(subset)[check].tolist())
-KeyError: ['price']
-
-====================
---- Execution Attempt #3 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 24, in <module>
-    df = df.dropna(subset=[target_column])
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 6670, in dropna
-    raise KeyError(np.array(subset)[check].tolist())
-KeyError: ['price']
-
-====================
---- Execution Attempt #4 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 24, in <module>
-    df = df.dropna(subset=[target_column])
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 6670, in dropna
-    raise KeyError(np.array(subset)[check].tolist())
-KeyError: ['price']
-
-====================
---- Execution Attempt #5 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 24, in <module>
-    df = df.dropna(subset=[target_column])
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 6670, in dropna
-    raise KeyError(np.array(subset)[check].tolist())
-KeyError: ['price']
-
-====================
---- Execution Attempt #1 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3805, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7081, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7089, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'price'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 27, in <module>
-    if df[target_column].dtype == 'object' or df[target_column].nunique() <= 10:
-       ~~^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 4102, in __getitem__
-    indexer = self.columns.get_loc(key)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3812, in get_loc
-    raise KeyError(key) from err
-KeyError: 'price'
-
-====================
---- Execution Attempt #2 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3805, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7081, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7089, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'price'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 27, in <module>
-    if df[target_column].dtype == 'object' or df[target_column].nunique() <= 10:
-       ~~^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 4102, in __getitem__
-    indexer = self.columns.get_loc(key)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3812, in get_loc
-    raise KeyError(key) from err
-KeyError: 'price'
-
-====================
---- Execution Attempt #3 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3805, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7081, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7089, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'price'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 27, in <module>
-    if df[target_column].dtype == 'object' or df[target_column].nunique() <= 10:
-       ~~^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 4102, in __getitem__
-    indexer = self.columns.get_loc(key)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3812, in get_loc
-    raise KeyError(key) from err
-KeyError: 'price'
-
-====================
---- Execution Attempt #4 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3805, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7081, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7089, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'price'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 27, in <module>
-    if df[target_column].dtype == 'object' or df[target_column].nunique() <= 10:
-       ~~^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 4102, in __getitem__
-    indexer = self.columns.get_loc(key)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3812, in get_loc
-    raise KeyError(key) from err
-KeyError: 'price'
-
-====================
---- Execution Attempt #5 ---
-Return Code: 1
---- stdout ---
-Target column: price
-
---- stderr ---
-Traceback (most recent call last):
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3805, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7081, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas\\_libs\\hashtable_class_helper.pxi", line 7089, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'price'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "d:\AutoML\app\scripts\ML.py", line 27, in <module>
-    if df[target_column].dtype == 'object' or df[target_column].nunique() <= 10:
-       ~~^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 4102, in __getitem__
-    indexer = self.columns.get_loc(key)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Laptop Gala\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 3812, in get_loc
-    raise KeyError(key) from err
-KeyError: 'price'
 
 ====================

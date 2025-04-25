@@ -1,69 +1,74 @@
 import os
 import sys
 import subprocess
+import time
 
 from flask import Flask, request, session, jsonify, send_from_directory
-from routes import feedback, MachineLearning, data_analysis, AnalysisPlanner, visualization_planner, visualization_generator, eda_fix, ml_fix
-from utils import filepreprocess, load_code_from_file, load_logs_from_file
+from flask_session import Session
+from routes import feedback, MachineLearning, data_analysis, visualization_planner, visualization_generator, eda_fix, ml_fix, AnalysisPlanner
+from utils import filepreprocess, load_code_from_file, load_logs_from_file, _serialize
 from constants import (
     DATASET_PATH,
     PROCESSED_DATASET_PATH,
     EDA_CODE_FILE_PATH,
     EDA_LOGS_FILE_PATH,
-    OUTPUT_PLAN_FILE,
+    ML_PLAN,
+    EDA_GUIDANCE_PLAN,
     ML_CODE_FILE_PATH,
     ML_OUTPUT_LOGS_FILE,
     VISUALIZATION_PLAN_FILE,
     VISUALIZATION_CODE_FILE_PATH,
-    VISUALIZATION_OUTPUT_DIR
+    VISUALIZATION_OUTPUT_DIR,
+    MAX_ATTEMPTS,MAX_FIX_ATTEMPTS,MAX_ML_EXEC_ATTEMPTS,MAX_ML_FIX_ATTEMPTS
 )
 
 app = Flask(__name__, static_folder="frontend/build", static_url_path="")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super_secret_key_98765")
 
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = os.path.join(os.getcwd(), ".flask_session")
+app.config["SESSION_PERMANENT"] = False
+Session(app)
+
 @app.route("/api/home", methods=["POST"])
 def api_home():
     prompt = request.form.get("queryInput")
     upload = request.files.get("file-upload")
+    session.clear()
+    filedetails = {}
 
-    if upload:
-        print(f"[DEBUG] Upload received: {upload.filename}")  # 👈 Add logging
-        print(f"[DEBUG] Saving to: {DATASET_PATH}")  # 👈 Check path before saving
+    try:
+        if upload:
+            os.makedirs(os.path.dirname(DATASET_PATH), exist_ok=True)
+            upload.save(DATASET_PATH)
+            filedetails = filepreprocess(DATASET_PATH)
+            if filedetails.get("error"):
+                app.logger.error(f"File preprocessing error: {filedetails['error']}")
+                return jsonify(error=filedetails["error"]), 400
+        elif prompt:
+            filedetails = {"info": "Proceeding with text prompt only."}
+            if os.path.exists(DATASET_PATH):
+                try: os.remove(DATASET_PATH)
+                except OSError as e: app.logger.warning(f"Could not remove previous dataset file {DATASET_PATH}: {e}")
+        else:
+            return jsonify(error="Provide a prompt or a CSV file."), 400
+    except Exception as e:
+        app.logger.error(f"Error during file upload/processing: {e}", exc_info=True)
+        return jsonify(error="Failed to process input.", details=str(e)), 500
 
-        # os.makedirs(os.path.dirname(DATASET_PATH), exist_ok=True)
-        upload.save(DATASET_PATH)
-
-        print(f"[DEBUG] File saved successfully.")
-
-        filedetails = filepreprocess(DATASET_PATH)
-        if filedetails.get("error"):
-            return jsonify(error=filedetails["error"]), 400
-    elif prompt:
-        filedetails = {"info": "Proceeding with text prompt only."}
-    else:
-        return jsonify(error="Provide a prompt or a CSV file."), 400
-
-    # Initialize conversation
-    session["filedetails"] = filedetails
-    session["conversation"] = [
+    serialized_filedetails = _serialize(filedetails)
+    session["filedetails"] = serialized_filedetails
+    initial_conversation = [
         f"User: {prompt or 'Analyze uploaded file.'}",
         f"System: {feedback.SYSTEM_PROMPT_INITIAL}",
-        f"FileDetails: {filedetails}"
+        f"FileDetails: {serialized_filedetails}"
     ]
-    session.pop("final_problem", None)
-    try:
-        conversation = session["conversation"]
-        conversation, final_problem = feedback.process_feedback(conversation)
-        session["conversation"] = conversation
-        if final_problem:
-            session["final_problem"] = final_problem
-    except Exception as e:
-        return jsonify(error="Failed to process initial feedback.", details=str(e)), 500
+    session["conversation"] = initial_conversation
 
     return jsonify({
-        "conversation": session["conversation"],
-        "filedetails": filedetails,
-        "final_problem": session.get("final_problem")
+        "conversation": session.get("conversation", []),
+        "filedetails": session.get("filedetails", {}),
+        "final_problem": None
     }), 200
 
 
@@ -71,193 +76,217 @@ def api_home():
 def api_conversation():
     conversation = session.get("conversation", [])
     final_problem = session.get("final_problem")
-    status_code = 200
 
     if not conversation:
-        return jsonify({"error": "No active conversation found in session."}), 404
+        return jsonify({"error": "No active conversation found."}), 404
 
-    if request.method == "GET":
-        # Assume GET is only called for refreshing conversation or on first render
-        if not final_problem:
-            try:
-                conversation, final_problem = feedback.process_feedback(conversation)
-                session["conversation"] = conversation
-                if final_problem:
-                    session["final_problem"] = final_problem
-            except Exception as e:
-                return jsonify({"error": "Failed to process feedback.", "details": str(e)}), 500
-
-    elif request.method == "POST":
+    if request.method == "POST":
         data = request.get_json()
         if not data or "user_response" not in data:
             return jsonify({"error": "Missing 'user_response' in request body."}), 400
 
         user_response = data["user_response"]
-        conversation.append(f"User: {user_response}")
-        conversation.append(f"System: {feedback.SYSTEM_PROMPT_NEXT_ITERATION}")
+        current_conversation = session.get("conversation", [])
+        current_conversation.append(f"User: {user_response}")
+        current_conversation.append(f"System: {feedback.SYSTEM_PROMPT_NEXT_ITERATION}")
+        session["conversation"] = current_conversation
 
         try:
-            conversation, final_problem = feedback.process_feedback(conversation)
-            session["conversation"] = conversation
-            if final_problem:
-                session["final_problem"] = final_problem
+            updated_conversation, new_final_problem = feedback.process_feedback(current_conversation)
+            session["conversation"] = updated_conversation
+            if new_final_problem:
+                session["final_problem"] = new_final_problem
+                final_problem = new_final_problem
+            elif "final_problem" in session:
+                final_problem = session["final_problem"]
+            else:
+                 final_problem = None
+
         except Exception as e:
-            return jsonify({"error": "Failed to process feedback.", "details": str(e)}), 500
+            app.logger.error(f"Failed to process feedback on POST: {e}", exc_info=True)
+            pass
+
+    elif request.method == "GET":
+        if "final_problem" not in session: 
+            try:
+                current_conversation = session.get("conversation", [])
+                if current_conversation:
+                    updated_conversation, new_final_problem = feedback.process_feedback(current_conversation)
+                    session["conversation"] = updated_conversation
+                    if new_final_problem:
+                        session["final_problem"] = new_final_problem
+                        final_problem = new_final_problem 
+            except Exception as e:
+                app.logger.error(f"Failed to process feedback on GET: {e}", exc_info=True)
+                pass 
 
     return jsonify({
-        "conversation": conversation,
+        "conversation": session.get("conversation", []),
         "final_problem": final_problem,
         "final_problem_determined": bool(final_problem)
-    }), status_code
+    }), 200
 
-MAX_ATTEMPTS = 5  # Maximum number of execution attempts
-MAX_FIX_ATTEMPTS = 3  # Maximum number of fix attempts per execution failure
-import time
+@app.route("/api/superllm", methods=["POST"])
+def api_superllm():
+    final_problem = session.get("final_problem")
+    nfiledetails = filepreprocess(PROCESSED_DATASET_PATH)
+
+    eda_code = load_code_from_file(EDA_CODE_FILE_PATH)
+    plan = AnalysisPlanner.generate_ml_plan(
+        business_problem=final_problem,
+        file_details=nfiledetails,
+    )
+    if not plan:
+        return jsonify(error="ML plan generation failed."), 500
+    return jsonify(status="plan_generated")
+
 
 @app.route("/api/dataanalysis", methods=["POST"])
 def api_dataanalysis():
     filedetails = session.get("filedetails")
     final_problem = session.get("final_problem")
-
     dataset_full_path = os.path.abspath(DATASET_PATH)
     eda_code_full_path = os.path.abspath(EDA_CODE_FILE_PATH)
+    eda_guidance_full_path = os.path.abspath(EDA_GUIDANCE_PLAN) 
 
-    # Validate inputs
-    if not os.path.exists(dataset_full_path):
-        app.logger.error(f"Dataset not found at specified path: {dataset_full_path}")
-        return jsonify(error=f"Dataset not found at specified path: {dataset_full_path}"), 400
     if not final_problem or not filedetails:
-        app.logger.error("Missing business problem or file details in session.")
+        app.logger.error("Data analysis request missing problem or file details in session.")
         return jsonify(error="Missing business problem or file details."), 400
+    if 'info' not in filedetails and not os.path.exists(dataset_full_path):
+         app.logger.error(f"Dataset file specified but not found: {dataset_full_path}")
+         return jsonify(error=f"Dataset file not found. Please re-upload."), 400
 
-    attempts = 0
-
-    # Generate and save initial EDA code
-    app.logger.info("Generating initial EDA code...")
-    eda_code = data_analysis.generate_data_analysis_code(
-        filedetails, final_problem, dataset_full_path
-    )
-    if not eda_code or eda_code.startswith("# Error"):
-        app.logger.error("Initial EDA code generation failed.")
-        return jsonify(error="EDA code generation failed."), 500
+    # --- Read EDA Guidance Plan ---
+    eda_guidance = ""
+    if os.path.exists(eda_guidance_full_path):
+        try:
+            with open(eda_guidance_full_path, 'r', encoding='utf-8') as f:
+                eda_guidance = f.read()
+            app.logger.info(f"Successfully loaded EDA guidance from {eda_guidance_full_path}")
+        except Exception as e:
+            app.logger.warning(f"Could not read EDA guidance file at {eda_guidance_full_path}: {e}. Proceeding without guidance.")
+            eda_guidance = "# Warning: Could not read EDA guidance plan file."
+    else:
+        app.logger.warning(f"EDA guidance file not found at {eda_guidance_full_path}. Proceeding without guidance.")
+        eda_guidance = "# Info: EDA guidance plan file not found."
 
     os.makedirs(os.path.dirname(eda_code_full_path), exist_ok=True)
-    app.logger.info(f"Saving initial EDA code to: {eda_code_full_path}")
-    if not data_analysis.save_code_to_file(eda_code, eda_code_full_path):
-        app.logger.error(f"Failed to save generated code to {eda_code_full_path}")
-        return jsonify(error="Failed to save generated EDA code."), 500
+    os.makedirs(os.path.dirname(EDA_LOGS_FILE_PATH), exist_ok=True)
 
-    # Execute and auto-fix loop
+    try:
+        app.logger.info("Generating initial EDA code with guidance...")
+        eda_code = data_analysis.generate_data_analysis_code(
+            filedetails=filedetails,
+            business_problem=final_problem,
+            file_path=dataset_full_path,
+            eda_guidance=eda_guidance
+        )
+        if not eda_code or eda_code.strip().startswith("# Error"):
+            app.logger.error(f"Initial EDA code generation failed. Response: {eda_code}")
+            return jsonify(error="EDA code generation failed.", details=eda_code), 500
+        if not data_analysis.save_code_to_file(eda_code, eda_code_full_path):
+            app.logger.error(f"Failed to save generated EDA code to {eda_code_full_path}")
+            return jsonify(error="Failed to save generated EDA code."), 500
+    except TypeError as te:
+         if 'eda_guidance' in str(te):
+              app.logger.error(f"TypeError: data_analysis.generate_data_analysis_code does not accept 'eda_guidance'. Update the function definition. Error: {te}", exc_info=True)
+              return jsonify(error="Internal Server Error: EDA code generator needs update.", details=str(te)), 500
+         else:
+              app.logger.error(f"TypeError during initial EDA code generation/saving: {te}", exc_info=True)
+              return jsonify(error="Failed to generate or save EDA code.", details=str(te)), 500
+    except Exception as e:
+        app.logger.error(f"Error generating/saving initial EDA code: {e}", exc_info=True)
+        return jsonify(error="Failed to generate or save EDA code.", details=str(e)), 500
+
+
+    attempts = 0
+    last_error_output = ""
+    current_code = eda_code 
+
     while attempts < MAX_ATTEMPTS:
         app.logger.info(f"Executing EDA code (attempt #{attempts + 1}/{MAX_ATTEMPTS}). Path: {eda_code_full_path}")
         try:
             result = subprocess.run(
-                [sys.executable, eda_code_full_path],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=120
+                [sys.executable, eda_code_full_path], capture_output=True, text=True, check=False, timeout=120
             )
-        except subprocess.TimeoutExpired:
-            app.logger.error(f"Attempt #{attempts + 1}: EDA script execution timed out.")
-            return jsonify(
-                error="Code execution timed out.",
-                details=f"Script at {eda_code_full_path} exceeded timeout."
-            ), 500
-        except Exception as subproc_err:
-            app.logger.error(f"Attempt #{attempts + 1}: Error running subprocess: {subproc_err}")
-            return jsonify(
-                error="Failed to execute generated code via subprocess.",
-                details=str(subproc_err)
-            ), 500
 
-        if result.returncode == 0:
-            app.logger.info(f"EDA code executed successfully after {attempts} fix attempt(s).")
-            app.logger.debug(f"STDOUT:\n{result.stdout}")
-            return jsonify(status="success", output=result.stdout), 200
+            log_content = f"--- EDA Attempt #{attempts + 1} ---\nRC: {result.returncode}\n--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}\n"
+            # Overwrite log on first attempt, append after
+            with open(EDA_LOGS_FILE_PATH, 'w' if attempts == 0 else 'a', encoding='utf-8') as log:
+                log.write(log_content + "="*20 + "\n")
+            session["eda_output_logs"] = log_content # Store last attempt log
 
-        # Execution failed
-        attempts += 1
-        app.logger.warning(f"Attempt #{attempts}: Execution failed with return code {result.returncode}.")
-        app.logger.debug(f"Failed STDOUT:\n{result.stdout}")
-        app.logger.debug(f"Failed STDERR:\n{result.stderr}")
+            if result.returncode == 0:
+                app.logger.info(f"EDA code executed successfully on attempt #{attempts + 1}.")
+                return jsonify(status="success", output=result.stdout), 200
 
-        if attempts >= MAX_ATTEMPTS:
-            app.logger.error(f"Execution failed after maximum ({MAX_ATTEMPTS}) attempts.")
-            return jsonify(
-                error=f"Code execution failed after {MAX_ATTEMPTS} attempts.",
-                details=result.stderr
-            ), 500
+            # --- Execution Failed ---
+            last_error_output = result.stderr if result.stderr else result.stdout
+            app.logger.warning(f"EDA Attempt #{attempts + 1} failed. RC: {result.returncode}. Error: {last_error_output[:500]}...")
+            # Increment attempts *after* checking result
+            attempts += 1
+            if attempts >= MAX_ATTEMPTS:
+                 app.logger.error(f"EDA execution failed after maximum ({MAX_ATTEMPTS}) attempts.")
+                 break # Exit the while loop
 
-        # Attempt to fix the code with retries
-        fix_attempts = 0
-        fixed_code = None
-        while fix_attempts < MAX_FIX_ATTEMPTS:
+            # --- Attempt to Fix ---
+            app.logger.info(f"Attempting EDA code correction (for execution attempt #{attempts})...")
             try:
-                with open(eda_code_full_path, "r", encoding='utf-8') as f:
-                    prev_code = f.read()
-                prev_err = result.stderr if result.stderr else result.stdout
-
-                app.logger.info(f"Attempting code correction (attempt #{attempts}, fix attempt #{fix_attempts + 1})...")
                 fixed_code = eda_fix.attempt_code_fix(
-                    prev_code,
-                    prev_err,
-                    dataset_full_path,
-                    final_problem,
-                    str(filedetails)
+                    failing_code_str=current_code,
+                    error_output_str=last_error_output,
+                    dataset_path_str=dataset_full_path,
+                    business_problem_str=final_problem,
+                    file_details_str=str(filedetails),
+                    eda_guidance=eda_guidance # Pass guidance to fixer
                 )
-                if fixed_code:
-                    break
+                if fixed_code and fixed_code.strip() and not fixed_code.strip().startswith("# Error"):
+                    app.logger.info(f"Fix obtained for attempt #{attempts}. Saving corrected code.")
+                    if data_analysis.save_code_to_file(fixed_code, eda_code_full_path):
+                         current_code = fixed_code # Update current_code for the next execution attempt
+                         # Loop continues to retry execution with fixed code
+                    else:
+                        app.logger.error(f"Attempt #{attempts}: Failed to save corrected EDA code. Retrying with previous code.")
+                        # Loop continues, but will retry with the *old* code again
                 else:
-                    fix_attempts += 1
-                    app.logger.warning(f"Fix attempt {fix_attempts} returned no code.")
+                    app.logger.warning(f"EDA Fix attempt after execution attempt #{attempts} did not yield usable code. Retrying with previous code.")
+                    # Loop continues, retrying with the old code
+
+            except TypeError as te_fix:
+                 if 'eda_guidance' in str(te_fix):
+                      app.logger.error(f"TypeError: eda_fix.attempt_code_fix does not accept 'eda_guidance'. Update the function definition. Error: {te_fix}", exc_info=True)
+                      # Cannot fix without guidance potentially, maybe break or just log and continue? Let's log and continue.
+                 else:
+                      app.logger.error(f"TypeError during EDA code fix attempt #{attempts}: {te_fix}", exc_info=True)
             except Exception as fix_err:
-                fix_attempts += 1
-                app.logger.error(f"Fix attempt {fix_attempts} failed with error: {fix_err}")
-                time.sleep(5)  # Wait 5 seconds before retrying
+                app.logger.error(f"Error during EDA code fix attempt #{attempts}: {fix_err}", exc_info=True)
+                # Loop continues, retrying with the old code
 
-        if not fixed_code:
-            app.logger.error(f"Failed to obtain a fix after {MAX_FIX_ATTEMPTS} attempts for execution attempt #{attempts}.")
-            # Continue to next attempt instead of stopping
-            continue
+        except subprocess.TimeoutExpired:
+            last_error_output = f"EDA script execution timed out after 120s."
+            app.logger.error(f"EDA Attempt #{attempts + 1} failed: Timeout") # Log before incrementing attempt counter
+            log_content = f"--- EDA Attempt #{attempts + 1} ---\nRC: TIMEOUT\nError: {last_error_output}\n"
+            with open(EDA_LOGS_FILE_PATH, 'a', encoding='utf-8') as log: log.write(log_content + "="*20 + "\n")
+            session["eda_output_logs"] = log_content
+            attempts += 1 
+            if attempts >= MAX_ATTEMPTS:
+                app.logger.error(f"EDA execution failed due to timeout after maximum ({MAX_ATTEMPTS}) attempts.")
+                break
 
-        # Overwrite with fixed code and retry
-        try:
-            with open(eda_code_full_path, "w", encoding='utf-8') as f:
-                f.write(fixed_code)
-            app.logger.info(f"Attempt #{attempts}: Fixed code written to {eda_code_full_path}. Retrying execution.")
-        except Exception as write_err:
-            app.logger.error(f"Attempt #{attempts}: Failed to write fixed code to {eda_code_full_path}: {write_err}")
-            return jsonify(
-                error="Failed to save the corrected code.",
-                details=str(write_err)
-            ), 500
+        except Exception as subproc_err:
+            last_error_output = f"Subprocess execution error: {str(subproc_err)}"
+            app.logger.error(f"EDA Attempt #{attempts + 1} failed: Subprocess error: {subproc_err}", exc_info=True) # Log before incrementing
+            log_content = f"--- EDA Attempt #{attempts + 1} ---\nRC: SUBPROCESS_ERROR\nError: {last_error_output}\n"
+            with open(EDA_LOGS_FILE_PATH, 'a', encoding='utf-8') as log: log.write(log_content + "="*20 + "\n")
+            session["eda_output_logs"] = log_content
+            attempts += 1 
+            if attempts >= MAX_ATTEMPTS:
+                app.logger.error(f"EDA execution failed due to subprocess error after maximum ({MAX_ATTEMPTS}) attempts.")
+                break # Exit loop
 
-    app.logger.error(f"Code execution failed after maximum ({MAX_ATTEMPTS}) attempts.")
-    return jsonify(error=f"Code execution failed after {MAX_ATTEMPTS} attempts."), 500
+    app.logger.error(f"EDA code execution failed permanently after {attempts} attempts.")
+    return jsonify(error=f"EDA code execution failed after {attempts} attempts.", details=last_error_output), 500
 
-@app.route("/api/superllm", methods=["POST"])
-def api_superllm():
-    final_problem = session.get("final_problem")
-    filedetails = session.get("filedetails")
-    if not final_problem or not filedetails:
-        return jsonify(error="Business problem or file details unavailable."), 400
-
-    eda_code = load_code_from_file(EDA_CODE_FILE_PATH)
-    plan = AnalysisPlanner.generate_ml_plan(
-        business_problem=final_problem,
-        file_details=filedetails,
-        eda_code=eda_code,
-        eda_output_logs=EDA_LOGS_FILE_PATH
-    )
-    if not plan:
-        return jsonify(error="ML plan generation failed."), 500
-    with open(OUTPUT_PLAN_FILE, "w") as f:
-        f.write(plan)
-    return jsonify(status="plan_generated")
-
-MAX_ML_EXEC_ATTEMPTS = 5 
-MAX_ML_FIX_ATTEMPTS = 3  
 
 @app.route("/api/ml", methods=["POST"])
 def api_ml():
@@ -265,192 +294,188 @@ def api_ml():
     ml_plan = None
     processed_dataset_details = None
 
-    # Define Paths
     processed_dataset_full_path = os.path.abspath(PROCESSED_DATASET_PATH)
-    ml_plan_full_path = os.path.abspath(OUTPUT_PLAN_FILE)
+    ml_plan_full_path = os.path.abspath(ML_PLAN) 
     ml_code_full_path = os.path.abspath(ML_CODE_FILE_PATH)
     ml_logs_full_path = os.path.abspath(ML_OUTPUT_LOGS_FILE)
+    eda_logs_full_path = os.path.abspath(EDA_LOGS_FILE_PATH) 
 
-    # Input Validation
     if not final_problem:
         app.logger.error("ML execution request failed: Final business problem not found in session.")
         return jsonify(error="Business problem definition unavailable."), 400
-    if not os.path.exists(ml_plan_full_path):
-        app.logger.error(f"ML execution request failed: ML plan file not found at {ml_plan_full_path}")
-        return jsonify(error="No ML plan available."), 400
 
-    # Check Processed Data
+    if os.path.exists(ml_plan_full_path):
+        try:
+            with open(ml_plan_full_path, 'r', encoding='utf-8') as f:
+                ml_plan = f.read()
+            if not ml_plan:
+                 app.logger.error(f"ML Plan file is empty: {ml_plan_full_path}")
+                 return jsonify(error="ML Plan is empty."), 500
+            app.logger.info("Successfully loaded ML plan.")
+            session["ml_plan"] = ml_plan 
+        except Exception as e:
+            app.logger.error(f"Failed to read ML plan file: {e}", exc_info=True)
+            return jsonify(error="Failed to read ML plan file.", details=str(e)), 500
+        except Exception as e:
+            app.logger.error(f"Failed to read ML plan file: {e}", exc_info=True)
+            return jsonify(error="Failed to read ML plan file.", details=str(e)), 500
+    else:
+        app.logger.error(f"ML execution request failed: ML plan file not found at {ml_plan_full_path}")
+        return jsonify(error="No ML plan available. Ensure planning step was successful."), 404
+
+    # Check for processed dataset
     app.logger.info(f"Checking for processed dataset at: {processed_dataset_full_path}")
     if not os.path.exists(processed_dataset_full_path):
          app.logger.error(f"ML execution failed: Processed dataset not found at {processed_dataset_full_path}. Did EDA run and save correctly?")
          return jsonify(error="Processed dataset not found. Please ensure EDA completed successfully."), 400
+
+    # --- Read EDA Output Logs ---
+    eda_output_logs = ""
+    if os.path.exists(eda_logs_full_path):
+        try:
+            with open(eda_logs_full_path, 'r', encoding='utf-8') as f:
+                eda_output_logs = f.read()
+            app.logger.info(f"Successfully loaded EDA logs from {eda_logs_full_path}")
+        except Exception as e:
+            app.logger.warning(f"Could not read EDA logs file at {eda_logs_full_path}: {e}. Proceeding without EDA log context.")
+            eda_output_logs = "# Warning: Could not read EDA logs file."
+    else:
+        app.logger.warning(f"EDA logs file not found at {eda_logs_full_path}. Proceeding without EDA log context.")
+        eda_output_logs = "# Info: EDA logs file not found."
+
+    os.makedirs(os.path.dirname(ml_code_full_path), exist_ok=True)
+    os.makedirs(os.path.dirname(ml_logs_full_path), exist_ok=True)
+
+    app.logger.info("Generating initial ML code with EDA log context...")
     try:
-        processed_dataset_details = filepreprocess(processed_dataset_full_path)
-        if processed_dataset_details.get("error"):
-            app.logger.error(f"Error preprocessing the processed dataset: {processed_dataset_details['error']}")
-            return jsonify(error=f"Error reading processed dataset: {processed_dataset_details['error']}"), 500
-        app.logger.info("Successfully loaded details for processed dataset.")
+        ml_code = MachineLearning.generate_and_refine_ml_code(
+            business_problem=final_problem,
+            file_path=processed_dataset_full_path,
+            ml_plan=ml_plan, # Pass the plan content
+            eda_output_logs=eda_output_logs #
+        )
+        # --- End Pass eda_output_logs ---
+        if not ml_code or ml_code.strip().startswith("# Error"):
+            app.logger.error(f"ML code generation failed. Reason: {ml_code}")
+            return jsonify(error="ML code generation failed.", details=ml_code), 500
+        if not MachineLearning.save_ml_code_to_file(ml_code, ml_code_full_path):
+            app.logger.error(f"Failed to save initial ML code to {ml_code_full_path}")
+            return jsonify(error="Failed to save generated ML code."), 500
+    except TypeError as te_ml:
+        if 'eda_output_logs' in str(te_ml):
+            app.logger.error(f"TypeError: MachineLearning.generate_and_refine_ml_code does not accept 'eda_output_logs'. Update the function definition. Error: {te_ml}", exc_info=True)
+            return jsonify(error="Internal Server Error: ML code generator needs update.", details=str(te_ml)), 500
+        elif 'ml_plan' in str(te_ml) and 'ML_PLAN' in str(te_ml.__traceback__): 
+            app.logger.error(f"TypeError: MachineLearning.generate_and_refine_ml_code potentially requires 'ML_PLAN' instead of 'ml_plan', or signature mismatch. Error: {te_ml}", exc_info=True)
+            return jsonify(error="Internal Server Error: ML code generator needs update (check plan argument name).", details=str(te_ml)), 500
+        else:
+            app.logger.error(f"TypeError during initial ML code generation/saving: {te_ml}", exc_info=True)
+            return jsonify(error="Failed to generate or save ML code.", details=str(te_ml)), 500
     except Exception as e:
-        app.logger.error(f"Unexpected error during processed dataset preprocessing: {e}", exc_info=True)
-        return jsonify(error="Failed to read processed dataset details.", details=str(e)), 500
+        app.logger.error(f"Error generating/saving initial ML code: {e}", exc_info=True)
+        return jsonify(error="Failed to generate or save ML code.", details=str(e)), 500
 
-    # Load ML Plan
-    try:
-        with open(ml_plan_full_path, 'r', encoding='utf-8') as f:
-            ml_plan = f.read()
-        if not ml_plan:
-             app.logger.error("ML Plan file is empty.")
-             return jsonify(error="ML Plan is empty."), 500
-        app.logger.info("Successfully loaded ML plan.")
-    except Exception as e:
-        app.logger.error(f"Failed to read ML plan file: {e}", exc_info=True)
-        return jsonify(error="Failed to read ML plan.", details=str(e)), 500
-
-    # --- Generate Initial ML Code ---
-    app.logger.info("Generating initial ML code...")
-    ml_code = MachineLearning.generate_and_refine_ml_code(
-        business_problem=final_problem,
-        file_path=processed_dataset_full_path, # Pass the PROCESSED path
-        ML_PLAN=ml_plan
-    )
-    if not ml_code or ml_code.startswith("# Error"):
-        app.logger.error(f"ML code generation failed. Reason: {ml_code}")
-        return jsonify(error="ML code generation failed.", details=ml_code), 500
-
-    if not MachineLearning.save_ml_code_to_file(ml_code, ml_code_full_path):
-        app.logger.error(f"Failed to save initial ML code to {ml_code_full_path}")
-        return jsonify(error="Failed to save generated ML code."), 500
     app.logger.info(f"Initial ML code saved to {ml_code_full_path}")
 
-    # --- Execute and Auto-Fix Loop ---
     attempts = 0
     last_error_output = "No execution attempts made yet."
+    current_code = ml_code
 
     while attempts < MAX_ML_EXEC_ATTEMPTS:
-        attempts += 1
-        app.logger.info(f"--- Starting ML Code Execution Attempt #{attempts}/{MAX_ML_EXEC_ATTEMPTS} ---")
+        app.logger.info(f"--- Starting ML Code Execution Attempt #{attempts + 1}/{MAX_ML_EXEC_ATTEMPTS} ---")
         app.logger.info(f"Running script: {ml_code_full_path}")
 
         result = None
         try:
-            # Execute the current ML script
             result = subprocess.run(
                 [sys.executable, ml_code_full_path],
                 capture_output=True, text=True, check=False,
-                timeout=300 # 5 min timeout
+                timeout=300
             )
 
-            # Save Logs
-            os.makedirs(os.path.dirname(ml_logs_full_path), exist_ok=True)
-            log_content = f"--- Execution Attempt #{attempts} ---\nReturn Code: {result.returncode}\n--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}\n" + "="*20 + "\n"
-            with open(ml_logs_full_path, 'a', encoding='utf-8') as log:
+            log_content = f"--- Execution Attempt #{attempts + 1} ---\nReturn Code: {result.returncode}\n--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}\n" + "="*20 + "\n"
+            # Overwrite log on first attempt, append afterwards
+            with open(ml_logs_full_path, 'w' if attempts == 0 else 'a', encoding='utf-8') as log:
                 log.write(log_content)
-            session["ml_output_logs"] = f"Attempt #{attempts}:\n" + result.stdout + "\n" + result.stderr
-            app.logger.info(f"Execution attempt #{attempts} completed. Logs saved.")
+            session["ml_output_logs"] = f"Attempt #{attempts + 1}:\n" + result.stdout + "\n" + result.stderr
+            app.logger.info(f"Execution attempt #{attempts + 1} completed. Logs saved.")
 
-            # Check Execution Result
             if result.returncode == 0:
-                app.logger.info(f"ML code executed successfully on attempt #{attempts}.")
-                app.logger.debug(f"Success STDOUT:\n{result.stdout}")
+                app.logger.info(f"ML code executed successfully on attempt #{attempts + 1}.")
                 return jsonify(status="success", output=result.stdout, logs_path=ml_logs_full_path), 200
 
             # --- Execution Failed ---
-            app.logger.warning(f"Attempt #{attempts}: ML execution failed (Code: {result.returncode}).")
-            app.logger.debug(f"Failed STDOUT:\n{result.stdout}")
-            app.logger.debug(f"Failed STDERR:\n{result.stderr}")
+            app.logger.warning(f"Attempt #{attempts + 1}: ML execution failed (Code: {result.returncode}).")
             last_error_output = result.stderr if result.stderr else result.stdout
-
-            # Check if max execution attempts reached AFTER logging failure
+            attempts += 1 # Increment attempts only after failure
             if attempts >= MAX_ML_EXEC_ATTEMPTS:
                 app.logger.error(f"ML execution failed after maximum ({MAX_ML_EXEC_ATTEMPTS}) attempts.")
-                break # Exit outer loop to return final error
+                break
 
-            # <<< --- START OF NESTED FIXER LOOP --- >>>
-            fix_attempts = 0
-            fixed_code = None # Reset fixed_code for this execution attempt
-            while fix_attempts < MAX_ML_FIX_ATTEMPTS:
-                fix_attempts += 1
-                app.logger.info(f"Attempting ML code correction (Exec Attempt #{attempts}, Fix Attempt #{fix_attempts}/{MAX_ML_FIX_ATTEMPTS})...")
-                try:
-                    # Read the code that just failed
-                    with open(ml_code_full_path, "r", encoding='utf-8') as f:
-                        failing_code = f.read()
+            # --- Attempt to Fix ---
+            app.logger.info(f"Attempting ML code correction (Exec Attempt #{attempts})...") # attempts is now incremented
+            try:
+                # Pass EDA logs to the fixer
+                # !!! IMPORTANT: Ensure ml_fix.attempt_ml_code_fix accepts eda_output_logs !!!
+                fixed_code = ml_fix.attempt_ml_code_fix(
+                    broken_ml_code=current_code, # Use code that just failed
+                    error_message=last_error_output,
+                    dataset_path=processed_dataset_full_path,
+                    business_goal=final_problem,
+                    ml_plan=ml_plan, # Pass plan
+                    eda_output_logs=eda_output_logs # Pass EDA logs
+                )
 
-                    # Call the ML fixer function
-                    fixed_code = ml_fix.attempt_ml_code_fix(
-                        broken_ml_code=failing_code,
-                        error_message=last_error_output,
-                        dataset_path=processed_dataset_full_path, # Pass processed path
-                        business_goal=final_problem,
-                        ml_script_summary=ml_plan # Pass plan as summary
-                    )
-
-                    if fixed_code:
-                         app.logger.info(f"ML code fix suggested by AI on fix attempt #{fix_attempts}.")
-                         app.logger.debug(f"Suggested Fix Snippet:\n{fixed_code[:500]}...")
-                         break # <<< EXIT INNER FIXER LOOP on success
-                    else:
-                         app.logger.warning(f"ML fix attempt #{fix_attempts} returned no code.")
-                         # Optional: Add a small delay before retrying the fixer
-                         # time.sleep(2)
-
-                except Exception as fix_call_err:
-                    app.logger.error(f"Attempt #{attempts}, Fix Attempt #{fix_attempts}: Error during call to attempt_ml_code_fix: {fix_call_err}", exc_info=True)
-                    # Optional: Add a longer delay if the fixer itself errors
-                    # time.sleep(5)
-
-            # --- AFTER INNER FIXER LOOP ---
-            if not fixed_code:
-                app.logger.error(f"Failed to obtain an ML fix after {MAX_ML_FIX_ATTEMPTS} attempts for execution attempt #{attempts}.")
-                app.logger.info("Proceeding to next execution attempt (if any remain)...")
-                # <<< CONTINUE to the next outer loop attempt, DON'T break <<<
-                continue # Go to the next iteration of the 'while attempts < MAX_ML_EXEC_ATTEMPTS' loop
-
-            # --- Fixer Succeeded ---
-            # Overwrite the script with the fixed version
-            if not MachineLearning.save_ml_code_to_file(fixed_code, ml_code_full_path):
-                 app.logger.error(f"Attempt #{attempts}: Critical error - failed to save the fixed ML code to {ml_code_full_path}. Aborting.")
-                 # If saving fails, we have to stop.
-                 return jsonify(error="Failed to save the corrected ML code.", details="Check file permissions and path."), 500
-            app.logger.info(f"Attempt #{attempts}: Fixed ML code saved. Retrying execution in the next outer loop iteration.")
-            # The outer loop will now continue with the fixed code
-
+                if fixed_code and fixed_code.strip() and not fixed_code.strip().startswith("# Error"):
+                     app.logger.info(f"ML code fix obtained for attempt #{attempts}.")
+                     if not MachineLearning.save_ml_code_to_file(fixed_code, ml_code_full_path):
+                         app.logger.error(f"Attempt #{attempts}: Critical error - failed to save the fixed ML code. Retrying with previous code.")
+                     else:
+                         app.logger.info(f"Attempt #{attempts}: Fixed ML code saved. Retrying execution.")
+                         current_code = fixed_code # Update code for next loop
+                else:
+                     app.logger.warning(f"ML fix attempt #{attempts} returned no usable code. Retrying with previous code.")
+            except TypeError as te_ml_fix:
+                 if 'eda_output_logs' in str(te_ml_fix):
+                      app.logger.error(f"TypeError: ml_fix.attempt_ml_code_fix does not accept 'eda_output_logs'. Update the function definition. Error: {te_ml_fix}", exc_info=True)
+                 elif 'ml_plan' in str(te_ml_fix):
+                      app.logger.error(f"TypeError: ml_fix.attempt_ml_code_fix does not accept 'ml_plan'. Update the function definition. Error: {te_ml_fix}", exc_info=True)
+                 else:
+                      app.logger.error(f"TypeError during ML code fix attempt #{attempts}: {te_ml_fix}", exc_info=True)
+                 # Continue loop with old code if fixer signature is wrong
+            except Exception as fix_call_err:
+                app.logger.error(f"Attempt #{attempts}: Error during call to attempt_ml_code_fix: {fix_call_err}", exc_info=True)
+                # Continue loop with old code
 
         except subprocess.TimeoutExpired:
-            # attempts counter already incremented at start of loop
             error_details = f"Script at {ml_code_full_path} exceeded timeout ({300}s)."
-            app.logger.error(f"Attempt #{attempts}: ML script execution timed out.")
+            app.logger.error(f"Attempt #{attempts + 1}: ML script execution timed out.") # Log before increment
             last_error_output = error_details
-            # Save timeout info to logs
-            os.makedirs(os.path.dirname(ml_logs_full_path), exist_ok=True)
-            with open(ml_logs_full_path, 'a', encoding='utf-8') as log:
-                 log.write(f"--- Execution Attempt #{attempts} ---\nReturn Code: TIMEOUT\nError: {error_details}\n" + "="*20 + "\n")
-            session["ml_output_logs"] = f"Attempt #{attempts}: Timeout - {error_details}"
+            log_content = f"--- Execution Attempt #{attempts + 1} ---\nReturn Code: TIMEOUT\nError: {error_details}\n" + "="*20 + "\n"
+            with open(ml_logs_full_path, 'a', encoding='utf-8') as log: log.write(log_content)
+            session["ml_output_logs"] = f"Attempt #{attempts + 1}: Timeout - {error_details}"
+            attempts += 1 # Increment after handling
             if attempts >= MAX_ML_EXEC_ATTEMPTS:
                  app.logger.error(f"ML code execution failed due to timeout after maximum ({MAX_ML_EXEC_ATTEMPTS}) attempts.")
-                 break # Exit outer loop
+                 break
             app.logger.info("Continuing to next attempt after timeout...")
-            continue # Go to next attempt
+            continue
 
         except Exception as subproc_err:
-            # attempts counter already incremented at start of loop
             error_details = str(subproc_err)
-            app.logger.error(f"Attempt #{attempts}: Error running ML subprocess: {subproc_err}", exc_info=True)
+            app.logger.error(f"Attempt #{attempts + 1}: Error running ML subprocess: {subproc_err}", exc_info=True) # Log before increment
             last_error_output = f"Subprocess execution error: {error_details}"
-             # Save error info to logs
-            os.makedirs(os.path.dirname(ml_logs_full_path), exist_ok=True)
-            with open(ml_logs_full_path, 'a', encoding='utf-8') as log:
-                 log.write(f"--- Execution Attempt #{attempts} ---\nReturn Code: SUBPROCESS_ERROR\nError: {error_details}\n" + "="*20 + "\n")
-            session["ml_output_logs"] = f"Attempt #{attempts}: Subprocess Error - {error_details}"
-            # Exit loop on unexpected subprocess error
-            break
-
-
-    # --- Loop Finished ---
+            log_content = f"--- Execution Attempt #{attempts + 1} ---\nReturn Code: SUBPROCESS_ERROR\nError: {error_details}\n" + "="*20 + "\n"
+            with open(ml_logs_full_path, 'a', encoding='utf-8') as log: log.write(log_content)
+            session["ml_output_logs"] = f"Attempt #{attempts + 1}: Subprocess Error - {error_details}"
+            attempts += 1 
+            if attempts >= MAX_ML_EXEC_ATTEMPTS:
+                 app.logger.error(f"ML execution failed due to subprocess error after maximum ({MAX_ML_EXEC_ATTEMPTS}) attempts.")
+                 break
     app.logger.error(f"ML code execution failed permanently after {attempts} attempt(s). Check logs: {ml_logs_full_path}")
     return jsonify(
         error=f"ML code execution failed after {attempts} attempt(s).",
-        details=last_error_output # Return the last captured error
+        details=last_error_output
     ), 500
 
 @app.route("/api/visualizationplanning", methods=["POST"])

@@ -59,7 +59,7 @@ export default function Home() {
     if (isListening && recognitionRef.current) { recognitionRef.current.stop(); }
     const formData = new FormData();
     formData.append('queryInput', queryInput);
-    if (file) { formData.append('file', file); }
+    if (file) { formData.append('file-upload', file); }
     try {
       const data = await callApi('home', 'POST', formData);
       if (data && data.conversation) { navigate('/conversation', { state: { conversation: data.conversation } }); }
@@ -104,14 +104,12 @@ export default function Home() {
                 placeholder={isListening ? "Listening..." : "Describe Your Problem"}
                 required
                 disabled={isListening}
-                // Input field often doesn't need its own specific class from modules
-                // if styled via parent (.inputWrapper input)
               />
-              {/* Make sure CSS module defines .inputIcons */}
+              {}
               <div className={styles.inputIcons}>
                 <label
                   htmlFor="file-upload"
-                  className={styles.iconButton} // Use styles object
+                  className={styles.iconButton} 
                   aria-disabled={isListening}
                   title="Attach file"
                   style={isListening ? { pointerEvents: 'none', opacity: 0.5 } : {}}
@@ -120,6 +118,7 @@ export default function Home() {
                 </label>
                 <input
                   id="file-upload"
+                  name="file-upload" 
                   type="file"
                   hidden
                   onChange={handleFileChange}

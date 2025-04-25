@@ -1,0 +1,28 @@
+*   **1. Initial ML Task Assessment:**
+    *   The most probable ML task is **Regression**. The business problem focuses on predicting car prices, which is a continuous numerical value.
+    *   The most likely target variable column name is `price`. Its apparent data type is `float64`.
+*   **2. Target Variable Investigation:**
+    *   **Guidance for EDA:**
+        *   Verify the `price` column exists and is of type `float64`. If it's not numeric, it needs to be converted.
+        *   Analyze the distribution of `price` (histogram, boxplot). Check for skewness. Consider transformations (e.g., log transformation) to handle skewness and potentially improve model performance.
+*   **3. Feature Exploration & Refinement:**
+    *   **Guidance for EDA:**
+        *   `symboling` might be an ordinal feature. Investigate its meaning and whether it's truly ordinal.
+        *   The boolean columns (e.g., `carbody_hardtop`, `CompanyName_alfa-romero`) are already one-hot encoded.
+        *   Investigate potential interactions between features (e.g., `enginesize` * `horsepower`, `curbweight` / `enginesize`).
+        *   Check correlations between numerical features and `price`. High correlations indicate potentially important features.
+        *   Consider polynomial features for non-linear relationships.
+*   **4. Data Quality & Cleaning:**
+    *   **Guidance for EDA:**
+        *   The initial data report indicates *no* missing values. This is crucial to confirm independently. Sometimes "missing" is represented by placeholders like -999 or "NA". A manual check of the data is vital.
+        *   If missing values are found: For numerical features, consider imputation using the mean or median. For categorical features, impute with the mode or create a new category like "Unknown".
+*   **5. Feature Representation:**
+    *   **Guidance for EDA:**
+        *   `cylindernumber` and `fuelsystem` are categorical. Decide on encoding strategies. One-Hot Encoding may be suitable for these, given the relatively small number of unique values.
+        *   Scale numerical features using `StandardScaler` or `MinMaxScaler`. Scaling is important for algorithms sensitive to feature scales, and is generally a good practice.
+*   **6. Desired State of Output Dataset (`processed_dataset.csv`):**
+    *   **Guidance for EDA:** The goal is to save a CSV named `processed_dataset.csv` where:
+        *   All columns are numerical (including encoded categoricals).
+        *   Missing values have been handled.
+        *   The `price` column is clean and potentially transformed (e.g., log-transformed if skewed).
+        *   The dataset is ready for direct input into ML models.

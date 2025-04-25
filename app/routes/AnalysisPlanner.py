@@ -1,179 +1,210 @@
-# AnalysisPlanner.py
 import os
-from groq import Groq
-import time # Optional for potential delays
+import sys
+import time
+import re
+import google.generativeai as genai
+from constants import AUTOML_ROOT_DIR, SCRIPTS_PATH_REL
 
-# --- Configuration ---
-# WARNING: Hardcoding API keys is insecure. Use environment variables or secrets management in production.
-API_KEY = "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" # User requested hardcoding
-MODEL_NAME = "llama3-70b-8192" # Using the model known to work with Groq
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
+MODEL_NAME = "gemini-2.0-flash"
 
-# Set environment variable for Groq client (it often reads this automatically)
-os.environ["GROQ_API_KEY"] = API_KEY
+OUTPUT_DIR_BASE = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL)
+os.makedirs(OUTPUT_DIR_BASE, exist_ok=True)
 
-client = None # Initialize client as None
-try:
-    # Initialize Groq client
-    client = Groq(timeout=30.0) # Added a timeout
-    print(f"✅ Groq client configured successfully for AnalysisPlanner (Model: {MODEL_NAME}).")
-except Exception as e:
-    print(f"❌ Error configuring Groq client: {e}")
-    # Consider how the application should behave if the client fails to initialize
+EDA_GUIDANCE_TXT_FILE_PATH = os.path.join(OUTPUT_DIR_BASE, "eda_guidance_plan.txt")
+ML_PLAN_TXT_FILE_PATH = os.path.join(OUTPUT_DIR_BASE, "ml_plan.txt") 
 
-# --- Refined & Robust Prompt Template ---
-# This template provides detailed instructions and emphasizes critical analysis of inputs.
-SYSTEM_TEMPLATE_ROBUST_PLANNER = r"""
-You are an expert Senior Data Scientist functioning as a strategic Machine Learning Planner.
-Your primary objective is to *synthesize* information from the business context, initial data assessment, the EDA code generated, and MOST IMPORTANTLY, the *execution logs* from that EDA code. Based on this synthesis, you will create a *clear, actionable, and data-driven* plan for the subsequent ML modeling phase. Avoid generic advice; tailor recommendations to the specifics observed.
+client = None
+client_configured = False
+
+if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GOOGLE_AI_API_KEY":
+    print(
+        "⚠ Warning: Google API Key not set or is placeholder."
+        " Ensure the GOOGLE_API_KEY environment variable is set correctly.",
+        file=sys.stderr
+    )
+else:
+    genai.configure(api_key=GEMINI_API_KEY)
+    client = genai.GenerativeModel(MODEL_NAME)
+    print(f"Google AI client configured for Guided Planner using model {MODEL_NAME}.")
+    client_configured = True
+
+
+SYSTEM_TEMPLATE_GUIDED_PLANNER = r"""
+You are an expert Senior Data Scientist creating a **Unified Analysis & ML Plan**.
+Your role is to provide strategic guidance for the Exploratory Data Analysis (EDA) and preprocessing phase, followed by an outline for the Machine Learning (ML) plan. Your guidance should focus on *what* needs to be achieved during EDA to prepare for the likely ML task, rather than dictating the exact code implementation.
 
 *Input Context Provided:*
 
-1.  *Business Problem:* The high-level goal driving the analysis.
+1.  Business Problem:
     <business_problem>
     {business_problem_str}
     </business_problem>
 
-2.  *Initial Dataset Details:* Metadata extracted before the EDA script ran.
+2.  Initial Dataset Details:
     <initial_dataset_details>
     {file_details_str}
     </initial_dataset_details>
 
-3.  *Generated EDA Code:* The Python script that was intended to be run for EDA and preprocessing.
-    <generated_eda_code>
-    python
-    {eda_code_str}
-    
-    </generated_eda_code>
+**Your Task: Generate the Unified Plan**
 
-4.  *EDA Execution Logs:* The *actual output (stdout/stderr)* generated when the EDA code was executed. *This is the most critical input for understanding the final state of the data.*
-    <eda_execution_logs>
-    
-    {eda_output_logs_str}
-    
-    </eda_execution_logs>
+Output **ONLY** the Markdown formatted plan below, starting *exactly* with "### Unified Analysis & ML Plan". Ensure clear separation between "Part 1: EDA & Preprocessing Guidance" and "Part 2: Machine Learning Plan".
 
-*Your Task: Generate the ML Plan*
+### Unified Analysis & ML Plan
 
-Analyze all inputs meticulously and produce a plan structured EXACTLY as follows using Markdown:
+**Part 1: EDA & Preprocessing Guidance**
 
-### ML Plan
+*   **Overall Goal:** Analyze the initial data to understand its characteristics and prepare it for the likely ML task identified below. The aim is to produce a cleaned dataset (`processed_dataset.csv`) suitable for modeling.
+*   **1. Initial ML Task Assessment:**
+    *   Based on the business problem and initial data, what is the most probable ML task? (e.g., Binary Classification, Regression). Briefly justify.
+    *   Identify the most likely target variable column name. What is its apparent data type?
+*   **2. Target Variable Investigation:**
+    *   **Guidance for EDA:**
+        *   Confirm the presence and data type of the potential target variable (`<target_variable_name>`). Are type conversions needed (e.g., object to numeric)?
+        *   Analyze its distribution. For classification, check for class imbalance. Quantify if significant imbalance exists, as this will impact modeling choices.
+*   **3. Feature Exploration & Refinement:**
+    *   **Guidance for EDA:**
+        *   Identify columns that appear irrelevant (e.g., unique IDs, high cardinality free text) or redundant. Consider dropping them.
+        *   Examine date/time columns. Could components like month, day of week, or time differences be useful features? Consider extracting or converting them.
+        *   Investigate categorical features. Pay attention to those with potentially high cardinality. How might these be handled effectively (e.g., grouping, encoding strategies)?
+        *   Assess relationships: Explore correlations between numerical features and between features and the potential target.
+*   **4. Data Quality & Cleaning:**
+    *   **Guidance for EDA:**
+        *   Thoroughly identify and profile missing values (NaNs, placeholders). Understand the extent and patterns of missingness.
+        *   Based on the findings, consider appropriate imputation strategies for numerical (e.g., median, mean) and categorical (e.g., mode, 'Unknown' category) features. The EDA should implement a reasonable approach.
+*   **5. Feature Representation:**
+    *   **Guidance for EDA:**
+        *   Determine how categorical features should be represented numerically for modeling. Consider techniques like One-Hot Encoding (for lower cardinality) or alternatives for higher cardinality features identified earlier.
+        *   Consider if numerical features require scaling (e.g., using StandardScaler or MinMaxScaler), especially if distance-based algorithms or regularized models are likely candidates later. Recommend applying scaling as a standard good practice.
+*   **6. Desired State of Output Dataset (`processed_dataset.csv`):**
+    *   **Guidance for EDA:** The goal is to save a CSV named `processed_dataset.csv` where:
+        *   Columns represent the final selected/engineered features and the target variable.
+        *   All data is numerical (including encoded categoricals).
+        *   Missing values have been addressed appropriately.
+        *   The target variable is clean and in a suitable format for the ML task.
 
-*1. EDA Summary & Key Findings (Log-Driven):*
-    *   **Focus exclusively on information confirmed by the <eda_execution_logs>.**
-    *   State the final dimensions (shape) of the data after EDA, as reported in the logs.
-    *   List any columns confirmed dropped or explicitly mentioned as kept/processed in the logs.
-    *   Summarize the final missing value status based on the logs (e.g., "Logs confirm no missing values remain.").
-    *   Mention any key transformations (e.g., encoding, scaling) indicated as completed in the logs.
-    *   Note any errors or warnings reported in the stderr section of the logs.
+**Part 2: Machine Learning Plan**
 
-*2. Target Variable Identification:*
-    *   Based on the <business_problem> and confirmed by reviewing the <eda_execution_logs> (e.g., checking final columns), state the *exact column name* identified as the target variable (y).
-    *   Specify its data type after EDA preprocessing (as inferred from logs or final df.dtypes if printed).
+*   **1. Anticipated ML Task & Target:**
+    *   Reiterate the ML Task identified in Part 1.
+    *   Confirm the expected target variable column name in `processed_dataset.csv`.
+*   **2. Potential Feature Set:**
+    *   Describe the types of features expected in `processed_dataset.csv` (e.g., original numerical scaled, OHE features, engineered date features). Exact names depend on EDA execution, but list key original columns likely to be included in some form.
+*   **3. Modeling Strategy:**
+    *   **Baseline Model(s):** Suggest simple baselines for comparison (e.g., Logistic Regression/Dummy Classifier for classification, Linear Regression/Dummy Regressor for regression).
+    *   **Candidate Model(s):** Recommend 1-2 potentially stronger models based on the task (e.g., RandomForest, GradientBoosting, LightGBM). Briefly mention why they might be suitable.
+*   **4. Evaluation Approach:**
+    *   **Primary Metric:** Recommend a primary metric aligned with the business goal (e.g., F1-score, AUC, Accuracy, RMSE, MAE, R-squared). Justify the recommendation.
+    *   **Secondary Metrics:** Suggest other metrics to provide a more complete picture.
+    *   **Validation:** Recommend a robust validation strategy (e.g., k-fold Cross-Validation, StratifiedKFold).
+*   **5. Further Modeling Considerations:**
+    *   Highlight key activities for the modeling phase itself, such as hyperparameter tuning, feature importance analysis, and potentially iterating on feature engineering based on model performance.
 
-*3. ML Task Type:*
-    *   Based on the target variable's nature (continuous, binary categorical, multi-class categorical) and the <business_problem>, clearly state the ML task: *Regression* or *Classification* (specify Binary or Multi-class if classification).
-
-*4. Feature Set for Modeling:*
-    *   List the *exact column names* that constitute the feature set (X) available for modeling after the EDA script's execution, according to the final state shown in the <eda_execution_logs>. Cross-reference with the EDA code's column dropping/creation steps.
-
-*5. Recommended Modeling Approach:*
-    *   *Baselines:* Suggest 1-2 simple baseline models appropriate for the task (e.g., DummyRegressor/DummyClassifier, LinearRegression/LogisticRegression).
-    *   *Primary Candidates:* Recommend *2-3 more complex models* likely to perform well, justifying briefly based on data characteristics (if inferrable from logs/details) or task type. Examples:
-        *   Regression: RandomForestRegressor, GradientBoostingRegressor, SVR, Lasso/Ridge. (Justification: "Tree ensembles for potential non-linearities", "Regularized linear models if high dimensionality").
-        *   Classification: RandomForestClassifier, GradientBoostingClassifier, SVC, LogisticRegression (with regularization). (Justification: "Ensembles for robustness", "SVC for complex boundaries").
-    *   Note: Explicitly state *NOT* to implement these yet, just recommend them for the next phase.
-
-*6. Evaluation Strategy:*
-    *   *Primary Metric:* Recommend the single most important metric to optimize based on the <business_problem> and task type (e.g., "Regression: R-squared (R2) to explain variance", "Classification (imbalanced): F1-score (weighted or macro) or Precision-Recall AUC", "Classification (balanced): Accuracy or F1-score").
-    *   *Secondary Metrics:* List other relevant metrics to monitor (e.g., Regression: MAE, RMSE; Classification: Precision, Recall, Accuracy, Confusion Matrix).
-    *   *Validation:* Strongly recommend *K-Fold Cross-Validation* (e.g., 5 or 10 folds) on the training set for comparing the recommended models robustly.
-
-*7. Critical Next Step Considerations & Potential Issues (Log-Driven):*
-    *   **Analyze the <eda_execution_logs> and <initial_dataset_details> for red flags or important notes for the ML Engineer.** Be specific and actionable. Examples:
-        *   "*Data Size:* Logs show final dataset has [N] rows and [M] features. This might be small for complex models; emphasize robust CV."
-        *   "*Imbalance:* Target variable analysis (if printed in logs or inferrable from initial details) suggests potential class imbalance for classification tasks. ML phase must use appropriate metrics (F1, PR-AUC) and consider techniques like stratification or resampling (SMOTE)."
-        *   "*Feature Scaling:* Logs confirm/suggest numerical features were scaled using StandardScaler. Ensure any new data follows the same scaling."
-        *   "*Encoding:* Logs confirm/suggest categorical features were OneHotEncoded. Note the potential increase in dimensionality ([M] final features)."
-        *   "*High Cardinality:* Although EDA aimed to drop high-cardinality features, verify from logs if any remain unexpectedly."
-        *   "*Errors in EDA:* Logs reported errors during [specific EDA step, e.g., encoding 'column_x']. This column might be missing or problematic for ML."
-        *   *Feature Engineering:* "EDA logs indicate no significant feature engineering was performed. If baseline models perform poorly, exploring feature interactions/ratios could be a next step."
-        *   *Data Leakage:* "Confirm that all preprocessing steps requiring fitting (imputation, scaling, encoding) were applied after the train-test split, using only training data for fitting (verify based on EDA code structure)."
-
-Ensure the output is only the Markdown plan, starting directly with ### ML Plan.
 """
 
-# --- Helper Function to Call Model ---
-def _call_model(messages_list) -> str:
-    """Sends messages list to Groq and returns cleaned text response."""
-    if not client:
-        return "# Error: Groq client not configured."
-    try:
-        print(f"Sending request to {MODEL_NAME} (AnalysisPlanner)...")
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=messages_list,
-            temperature=0.2, # Keep low temp for structured output
-            # max_tokens=2048, # Adjust if plans get truncated
-        )
-        print("Response received (AnalysisPlanner).")
+def _call_model(prompt: str) -> str:
+    if not client_configured or not client:
+        return "# Error: Google AI client not configured."
 
-        if completion.choices and completion.choices[0].message:
-            text = completion.choices[0].message.content or "" # Ensure text is not None
-        else:
-            print("Warning: Groq response (AnalysisPlanner) might be empty or blocked.")
-            text = f"# Error: No valid response text received. Finish Reason: {completion.choices[0].finish_reason if completion.choices else 'UNKNOWN'}"
+    print(f"Sending request to {MODEL_NAME} (GuidedPlanner)...")
+    response = client.generate_content(contents={'parts': [{'text': prompt}]})
+    print("Response received (GuidedPlanner).")
 
-        return text.strip() # Return raw text for the main function to handle
+    if response.parts:
+         return response.parts[0].text.strip().lstrip('```markdown').rstrip('```').strip()
+    else:
+         if response.prompt_feedback:
+              print(f"⚠ Response may be blocked: {response.prompt_feedback}", file=sys.stderr)
+              return f"# Error: Response generation failed or blocked by safety settings. Feedback: {response.prompt_feedback}"
+         return "# Error: Received empty response from API."
 
-    except Exception as e:
-        print(f"❌ An error occurred during Groq API call (AnalysisPlanner): {e}")
-        # Consider logging the full traceback here for debugging
-        return f"# Error generating response via API: {e}"
 
-# --- Main Planner Function ---
+def _split_and_save_plan(unified_plan: str, eda_guidance_path: str, ml_plan_path: str) -> tuple[str | None, str | None]:
+    eda_plan_part = None
+    ml_plan_part = None
+
+    part1_heading = "**Part 1: EDA & Preprocessing Guidance**"
+    part2_heading = "**Part 2: Machine Learning Plan**"
+
+    part1_match = re.search(re.escape(part1_heading), unified_plan, re.IGNORECASE | re.MULTILINE)
+    part2_match = re.search(re.escape(part2_heading), unified_plan, re.IGNORECASE | re.MULTILINE)
+
+    if part1_match and part2_match:
+        part1_content_start_index = part1_match.end() # Start *after* the heading
+        part2_content_start_index = part2_match.end() # Start *after* the heading
+        part2_heading_start_index = part2_match.start() # Start *of* the heading
+
+        # Extract Part 1: From end of Part 1 heading to start of Part 2 heading
+        eda_plan_part = unified_plan[part1_content_start_index:part2_heading_start_index].strip()
+        # Extract Part 2: From end of Part 2 heading to the end of the string
+        ml_plan_part = unified_plan[part2_content_start_index:].strip()
+
+    elif part1_match:
+         print("⚠ Warning: Found EDA Guidance (Part 1) heading but not ML Plan (Part 2) heading.", file=sys.stderr)
+         eda_plan_part = unified_plan[part1_match.end():].strip() # Take everything after Part 1 heading
+         ml_plan_part = "# Error: ML Plan (Part 2) marker not found in LLM response."
+    else:
+        print("❌ Error: Could not find 'Part 1: EDA & Preprocessing Guidance' heading marker in LLM response.", file=sys.stderr)
+        return None, None
+
+    if not eda_plan_part:
+         print("⚠ Warning: Extracted EDA Guidance content is empty.", file=sys.stderr)
+         eda_plan_part = "# Info: EDA Guidance content extracted as empty." # Placeholder if empty after split
+    if not ml_plan_part:
+         print("⚠ Warning: Extracted ML Plan content is empty.", file=sys.stderr)
+         ml_plan_part = "# Info: ML Plan content extracted as empty." # Placeholder if empty after split
+
+    with open(eda_guidance_path, 'w', encoding='utf-8') as f:
+        f.write(eda_plan_part)
+    print(f"EDA Guidance saved to: {eda_guidance_path}")
+
+    with open(ml_plan_path, 'w', encoding='utf-8') as f:
+        f.write(ml_plan_part)
+    print(f"ML Plan saved to: {ml_plan_path}")
+
+    return eda_plan_part, ml_plan_part
+
+
 def generate_ml_plan(
     business_problem: str,
-    file_details: dict,
-    eda_code: str,
-    eda_output_logs: str
+    file_details: dict
 ) -> str:
-    """Generates the ML plan by analyzing EDA results using the robust prompt."""
+    missing = []
+    if not business_problem:
+        missing.append('business_problem')
+    if not isinstance(file_details, dict) or not file_details:
+        missing.append('file_details (must be a non-empty dictionary)')
+    if missing:
+        return f"# Error: Missing or invalid inputs for planning: {', '.join(missing)}"
 
-    # Basic validation of inputs
-    if not all([business_problem, file_details, isinstance(file_details, dict), eda_code, eda_output_logs]):
-         missing = [name for name, val in locals().items() if not val or (name == 'file_details' and not isinstance(val, dict))]
-         error_msg = f"# Error: Missing or invalid inputs for ML Plan generation: {', '.join(missing)}"
-         print(error_msg)
-         return error_msg
-
-    # Prepare file details string, limiting sample data
     details_copy = file_details.copy()
-    details_copy["sample_data"] = details_copy.get("sample_data", [])[:3] # Limit sample
+    if 'sample_data' in details_copy and isinstance(details_copy['sample_data'], list):
+        details_copy['sample_data'] = details_copy['sample_data'][:3]
+    elif 'sample_data' in details_copy:
+         del details_copy['sample_data']
+
+    if 'columns' in details_copy and isinstance(details_copy['columns'], list) and len(details_copy['columns']) > 50:
+         details_copy['columns'] = details_copy['columns'][:50] + ['... (truncated)']
+
     file_details_str = "\n".join(f"- {k}: {v}" for k, v in details_copy.items())
 
-    # Ensure code and logs are treated as strings
-    eda_code_str = str(eda_code)
-    eda_output_logs_str = str(eda_output_logs)
-
-    print("Formatting robust ML Plan prompt...")
-    # Use the robust template
-    prompt_content = SYSTEM_TEMPLATE_ROBUST_PLANNER.format(
+    prompt = SYSTEM_TEMPLATE_GUIDED_PLANNER.format(
         business_problem_str=business_problem,
         file_details_str=file_details_str,
-        eda_code_str=eda_code_str,
-        eda_output_logs_str=eda_output_logs_str
     )
 
-    # Prepare messages list for the API call
-    messages_list = [{"role": "user", "content": prompt_content}]
+    unified_plan = _call_model(prompt)
 
-    print("Generating ML Plan using robust prompt...")
-    ml_plan = _call_model(messages_list)
+    if unified_plan.startswith("# Error:"):
+        return unified_plan
 
-    # Basic check if the response indicates an error from the API call itself
-    if ml_plan.startswith("# Error"):
-        print(f"ML Plan generation failed with API error: {ml_plan}")
+    eda_guidance_part, ml_plan_part = _split_and_save_plan(
+        unified_plan,
+        EDA_GUIDANCE_TXT_FILE_PATH, # Save EDA guidance to .txt
+        ML_PLAN_TXT_FILE_PATH       # Save ML plan to .txt
+    )
+
+    if ml_plan_part is None or ml_plan_part.startswith("# Error"):
+        return ml_plan_part if ml_plan_part else "# Error: Failed to split or save the generated plan."
     else:
-        print("ML Plan generated successfully.")
-
-    return ml_plan
+        return ml_plan_part

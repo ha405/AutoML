@@ -1,6 +1,10 @@
-from google import genai
+import google.generativeai as genai
 
-client = genai.Client(api_key="AIzaSyBoAFOxBSX1nxEF8lNuhJudPiHVTCRNK8Q")
+GOOGLE_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"  
+MODEL_NAME = "gemini-2.0-flash"
+
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel(MODEL_NAME)
 
 SYSTEM_PROMPT_INITIAL = """
 You are an AI assisting with business problem definition.
@@ -43,9 +47,7 @@ Do not include any additional suggestions, next steps, or conversational text—
 """
 
 def generate_response(messages):
-    response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=messages
-    )
+    response = model.generate_content(contents=messages)
     return response.text.strip()
 
 def process_feedback(conversation):

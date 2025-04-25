@@ -1,0 +1,65 @@
+**Overall Goal of Visualizations**
+=====================================
+
+The primary objective of the visualizations is to provide insights into the car price prediction model, enabling management to understand pricing dynamics, optimize car design and business strategy, and effectively price vehicles in a new market. The visualizations should help answer business questions such as:
+
+* Which features are most influential in determining car prices?
+* How well does the model perform in terms of predicting prices?
+* What are the relationships between different features and car prices?
+
+**Key Insights from ML Output to Visualize**
+=============================================
+
+Based on the provided ML output, the following key insights need to be visualized:
+
+* Feature importances to understand which factors are most influential in determining car prices
+* Model performance metrics such as RMSE, MAE, and R-squared to evaluate the model's ability to predict prices
+* Distribution of predicted prices to understand the model's behavior
+* Relationships between different features and car prices to identify patterns and correlations
+
+**Recommended Visualizations (with Justification)**
+=====================================================
+
+### Visualization 1: Bar Chart of Feature Importances
+*Insight to Visualize:* Feature importances to understand which factors are most influential in determining car prices
+*Justification:* A bar chart is suitable for comparing the relative importance of different features, allowing for easy identification of the most influential factors.
+*Data to Use:* Feature importance scores from the Gradient Boosting Regressor model
+
+### Visualization 2: Scatter Plot of Predicted vs. Actual Prices
+*Insight to Visualize:* Distribution of predicted prices to understand the model's behavior
+*Justification:* A scatter plot is suitable for visualizing the relationship between predicted and actual prices, allowing for identification of patterns, outliers, and biases.
+*Data to Use:* Predicted prices from the Gradient Boosting Regressor model, actual prices from the test set
+
+### Visualization 3: Heatmap of Correlation Matrix
+*Insight to Visualize:* Relationships between different features and car prices to identify patterns and correlations
+*Justification:* A heatmap is suitable for visualizing the correlation matrix, allowing for easy identification of strong correlations between features and car prices.
+*Data to Use:* Correlation matrix of the original dataset
+
+### Visualization 4: Line Plot of Evaluation Metrics
+*Insight to Visualize:* Model performance metrics such as RMSE, MAE, and R-squared to evaluate the model's ability to predict prices
+*Justification:* A line plot is suitable for visualizing the evaluation metrics, allowing for easy comparison of the model's performance across different metrics.
+*Data to Use:* Evaluation metrics (RMSE, MAE, R-squared) from the Gradient Boosting Regressor model
+
+### Visualization 5: Histogram of Predicted Prices
+*Insight to Visualize:* Distribution of predicted prices to understand the model's behavior
+*Justification:* A histogram is suitable for visualizing the distribution of predicted prices, allowing for easy identification of patterns and outliers.
+*Data to Use:* Predicted prices from the Gradient Boosting Regressor model
+
+**Data to be Used for Each Visualization**
+=============================================
+
+* Feature importance scores from the Gradient Boosting Regressor model
+* Predicted prices from the Gradient Boosting Regressor model
+* Actual prices from the test set
+* Correlation matrix of the original dataset
+* Evaluation metrics (RMSE, MAE, R-squared) from the Gradient Boosting Regressor model
+
+**Specific Instructions for Visualization Generation LLM**
+=====================================================
+
+* Use Python libraries such as matplotlib.pyplot and seaborn for static plots
+* Consider using plotly for interactive plots if appropriate
+* Use a consistent color palette and styling theme throughout the visualizations
+* Emphasize the business relevance of each visualization by including clear titles, labels, and annotations
+* Provide tooltips or hover-over text for interactive plots to display additional information
+* Ensure that the visualizations are clear, concise, and easy to interpret for a non-technical audience

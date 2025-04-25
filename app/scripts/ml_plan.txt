@@ -1,0 +1,25 @@
+*   **1. Anticipated ML Task & Target:**
+    *   The ML Task is **Regression** (predicting car prices).
+    *   The target variable column in `processed_dataset.csv` is expected to be `price` (potentially log-transformed).
+*   **2. Potential Feature Set:**
+    *   `processed_dataset.csv` will contain a mix of feature types:
+        *   Scaled original numerical features (e.g., `wheelbase`, `carlength`, `carwidth`, `carheight`, `curbweight`, `enginesize`, `boreratio`, `stroke`, `compressionratio`, `horsepower`, `peakrpm`, `citympg`, `highwaympg`).
+        *   One-Hot Encoded categorical features (e.g., `cylindernumber`, `fuelsystem`, and the boolean features already present).
+        *   Potentially interaction terms or polynomial features.
+*   **3. Modeling Strategy:**
+    *   **Baseline Model(s):**
+        *   `Linear Regression`: A simple linear model.
+        *   `DummyRegressor`: Predicts using the mean or median of the target variable (for comparison).
+    *   **Candidate Model(s):**
+        *   `RandomForestRegressor`: An ensemble of decision trees, robust to overfitting and can capture non-linear relationships.
+        *   `GradientBoostingRegressor` (e.g., XGBoost, LightGBM, CatBoost): Another powerful ensemble method known for good performance, especially when tuned well.
+*   **4. Evaluation Approach:**
+    *   **Primary Metric:** `Root Mean Squared Error (RMSE)`: Penalizes larger errors more heavily and is easily interpretable in the original price units.
+    *   **Secondary Metrics:**
+        *   `Mean Absolute Error (MAE)`: Provides a measure of the average magnitude of errors.
+        *   `R-squared`: Explains the proportion of variance in the target variable explained by the model.
+    *   **Validation:** `k-fold Cross-Validation (k=5 or 10)`: Provides a more robust estimate of model performance by averaging results across multiple train/test splits.
+*   **5. Further Modeling Considerations:**
+    *   Perform hyperparameter tuning for the selected models (e.g., using GridSearchCV or RandomizedSearchCV).
+    *   Analyze feature importance from tree-based models to understand which features are most influential in predicting car prices.
+    *   Iterate on feature engineering: Based on model performance and feature importance, consider adding or removing features, or creating new interaction terms.

@@ -12,26 +12,23 @@ except ImportError:
     genai = None
 
 # --- Global Client Initialization Block ---
-genai_client = None  # Initialize to None FIRST
+genai_client = None
 if genai:
     try:
-        GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyBoAFOxBSX1nxEF8lNuhJudPiHVTCRNK8Q")
-        if not GEMINI_API_KEY:
-            raise ValueError("GEMINI_API_KEY not set in environment variables")
-        
-        # Configure the client
+        GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
+        if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GOOGLE_AI_API_KEY":
+            raise ValueError("GOOGLE_API_KEY not set or is placeholder in environment variables")
+
         genai.configure(api_key=GEMINI_API_KEY)
-        # Use a valid model name (update based on actual available models)
-        MODEL_NAME = "gemini-1.5-flash"  # Example; check documentation for correct model
+        MODEL_NAME = "gemini-2.0-flash" 
         genai_client = genai.GenerativeModel(MODEL_NAME)
-        print(f"INFO ({__file__}): Gemini client configured using model {MODEL_NAME}.", file=sys.stderr)
+        print(f"INFO ({__file__}): Gemini client configured for code fixing using model {MODEL_NAME}.", file=sys.stderr)
     except Exception as e:
-        print(f"ERROR ({__file__}): Error setting up Gemini client: {e}", file=sys.stderr)
-        genai_client = None  # Ensure it's None on error
+        print(f"ERROR ({__file__}): Error setting up Gemini client for code fixing: {e}", file=sys.stderr)
+        genai_client = None
 else:
     print(f"INFO ({__file__}): google.generativeai library not available. Client not configured.", file=sys.stderr)
 
-# Final check after initialization attempt
 print(f"INFO ({__file__}): Global genai_client state after setup: {type(genai_client)}", file=sys.stderr)
 
 # --- Helper Function ---
@@ -41,17 +38,14 @@ def clean_llm_code_output(raw_code: str) -> str:
     """
     if not raw_code:
         return ""
-    # Handle multiple markdown styles
-    patterns = [
-        r"```(?:[\w+\-]*)\s*\n(.*?)\n```",  # Standard fences
-        r"```\s*(.*?)\s*```",               # Simple fences
-        r"(^[^\n]*\n)?(.*)",                # Fallback: take all after first line
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, raw_code, re.DOTALL)
-        if match:
-            return match.group(1).strip() if match.lastindex == 1 else match.group(2).strip()
-    return raw_code.strip()  # Last resort
+    cleaned = raw_code.strip()
+    if cleaned.startswith("```python"):
+        cleaned = cleaned[len("```python"):].strip()
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[len("```"):].strip()
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3].strip()
+    return cleaned
 
 # --- Core Function (Uses Global Client) ---
 def attempt_code_fix(
@@ -59,81 +53,61 @@ def attempt_code_fix(
     error_output_str: str,
     dataset_path_str: str,
     business_problem_str: str,
-    file_details_str: str
+    file_details_str: str,
+    eda_guidance: str 
 ) -> str | None:
     """
-    Uses the globally configured Gemini LLM client to propose a code fix.
+    Uses the globally configured Gemini LLM client to propose a code fix,
+    considering the original EDA guidance plan.
     """
     global genai_client
     if not genai_client:
         print(f"ERROR ({__file__}): Global Gemini client not available or not configured. Skipping code fix attempt.", file=sys.stderr)
         return None
 
-    # Validate input strings
     if not failing_code_str:
         print(f"WARNING ({__file__}): No failing code provided. Skipping code fix attempt.", file=sys.stderr)
         return None
     if not error_output_str:
         print(f"WARNING ({__file__}): No error output provided. Skipping code fix attempt.", file=sys.stderr)
         return None
+    if not eda_guidance:
+         print(f"WARNING ({__file__}): No EDA guidance provided to code fixer. Context will be limited.", file=sys.stderr)
+         eda_guidance = "# No EDA guidance available for context." # Placeholder
 
-    # Limit context length to avoid exceeding token limits
+    # Limit context length
     error_snippet = error_output_str[:2000]
     file_details_snippet = file_details_str[:1000]
+    eda_guidance_snippet = eda_guidance[:2000] # Limit guidance length too
 
-    # Refined Prompt with example
+    # Refined Prompt including EDA Guidance
     prompt = f"""
-You are an expert Python code reviewer and fixer.
+You are an expert Python code reviewer and fixer specializing in EDA and data preprocessing scripts.
 The following Python script encountered an error during execution. Your task is to:
-1. Analyze the provided 'Failing Python Code'.
-2. Analyze the 'Error Output' it generated.
-3. Consider the 'Context' (Dataset Path, Business Problem, File Details).
+1. Analyze the 'Failing Python Code'.
+2. Analyze the 'Error Output'.
+3. Consider the overall 'Context' (Dataset Path, Business Problem, File Details, **and the original EDA Guidance Plan**).
 4. Identify the root cause of the error.
-5. Provide a corrected, complete version of the Python script that resolves the error and fulfills the original script's likely intent based on the context.
+5. Provide a corrected, complete version of the Python script that resolves the error AND **still adheres to the original EDA Guidance Plan as much as possible** while fixing the error.
 
 **Requirements for the Corrected Script:**
 - It must be runnable Python code.
-- It should address the specific error found in the 'Error Output'.
-- Before applying imputation, check that the list of columns is not empty and that those columns exist in the dataframe.
-- It should correctly load the dataset from the specified 'Dataset Path'.
+- It must address the specific error found in the 'Error Output'.
+- It must align with the goals and steps outlined in the 'EDA Guidance Plan'.
+- It must correctly load the dataset from the specified 'Dataset Path'.
 - It should align with the 'Business Problem' description.
-- It should handle potential issues gracefully (e.g., file not found, unexpected data).
-- Use standard libraries like pandas, numpy, and relevant sklearn modules if appropriate for the task implied by the business problem.
-- Follow common Python best practices for clarity and readability.
+- Use standard libraries (pandas, numpy, os, sklearn).
 - **Output ONLY the raw, corrected Python code. Do not include explanations, apologies, or markdown formatting like ```python ... ```.**
-
-**Example Expected Output:**
-If the error is about missing columns, ensure the code checks for column existence before processing.
-Example:
-```python
-import pandas as pd
-df = pd.read_csv('{dataset_path_str}')
-columns = [col for col in ['col1', 'col2'] if col in df.columns]
-if columns:
-    df[columns] = df[columns].fillna(df[columns].mean())
-```
 
 **Context:**
 - Dataset Path: '{dataset_path_str}'
 - Business Problem: '{business_problem_str}'
 - File Details Snippet: {file_details_snippet}{'...' if len(file_details_str) > 1000 else ''}
+- EDA Guidance Plan Snippet:
+<eda_guidance_plan>
+{eda_guidance_snippet}{'...' if len(eda_guidance) > 2000 else ''}
+</eda_guidance_plan>
 
 **Failing Python Code:**
-```python
 {failing_code_str}
 """
-    
-    # Retry logic for obtaining a fix
-    for attempt in range(1, 6):  # Try up to 5 times
-        try:
-            response = genai_client.generate_content(prompt)
-            cleaned_code = clean_llm_code_output(response.text)
-            if cleaned_code:
-                print(f"INFO ({__file__}): Fix obtained on attempt {attempt}.", file=sys.stderr)
-                return cleaned_code
-            print(f"WARNING ({__file__}): Attempt {attempt} returned empty code.", file=sys.stderr)
-        except Exception as e:
-            print(f"ERROR ({__file__}): Attempt {attempt} failed: {e}", file=sys.stderr)
-        time.sleep(5)  # Wait 5 seconds before retrying
-    print(f"ERROR ({__file__}): Failed to obtain fix after 5 attempts.", file=sys.stderr)
-    return None

@@ -4,7 +4,7 @@ import google.generativeai as genai
 import os
 import sys
 
-GOOGLE_API_KEY = "AIzaSyBoAFOxBSX1nxEF8lNuhJudPiHVTCRNK8Q" 
+GOOGLE_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ" 
 MODEL_NAME = "gemini-2.0-flash" # Or "gemini-pro". Flash is faster, Pro might be slightly better at complex code.
 
 # Configure the Gemini client globally
