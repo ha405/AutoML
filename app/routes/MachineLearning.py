@@ -357,13 +357,12 @@ def save_ml_code_to_file(code: str, file_path: str) -> bool:
         print(f"Not saving ML code due to generation error or None value.", file=sys.stderr)
         return False
 
-    cleaned_code = code.strip() # Basic strip, main cleaning in generate_response
+    cleaned_code = code.strip()
     if cleaned_code.startswith("```python"):
         cleaned_code = cleaned_code[len("```python"):].strip()
     if cleaned_code.endswith("```"):
         cleaned_code = cleaned_code[:-3].strip()
 
-    # Ensure directory exists before writing
     try:
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:

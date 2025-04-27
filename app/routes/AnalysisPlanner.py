@@ -32,7 +32,7 @@ else:
 
 SYSTEM_TEMPLATE_GUIDED_PLANNER = r"""
 You are an expert Senior Data Scientist creating a **Unified Analysis & ML Plan**.
-Your role is to provide strategic guidance for the Exploratory Data Analysis (EDA) and preprocessing phase, followed by an outline for the Machine Learning (ML) plan. Your guidance should focus on *what* needs to be achieved during EDA to prepare for the likely ML task, rather than dictating the exact code implementation.
+Your role is to provide strategic guidance for the Exploratory Data Analysis (EDA) and preprocessing phase, followed by an outline for the Machine Learning (ML) plan. Your guidance should focus on *what* needs to be achieved and *how to communicate findings clearly* to non-technical stakeholders, rather than dictating exact code implementations.
 
 *Input Context Provided:*
 
@@ -94,11 +94,11 @@ Output **ONLY** the Markdown formatted plan below, starting *exactly* with "### 
     *   **Baseline Model(s):** Suggest simple baselines for comparison (e.g., Logistic Regression/Dummy Classifier for classification, Linear Regression/Dummy Regressor for regression).
     *   **Candidate Model(s):** Recommend 1-2 potentially stronger models based on the task (e.g., RandomForest, GradientBoosting, LightGBM). Briefly mention why they might be suitable.
 *   **4. Evaluation Approach:**
-    *   **Primary Metric:** Recommend a primary metric aligned with the business goal (e.g., F1-score, AUC, Accuracy, RMSE, MAE, R-squared). Justify the recommendation.
+    *   **Primary Metric:** Recommend a primary metric aligned with the business goal (e.g., F1-score, Accuracy, RMSE, MAE). Justify the recommendation.
     *   **Secondary Metrics:** Suggest other metrics to provide a more complete picture.
     *   **Validation:** Recommend a robust validation strategy (e.g., k-fold Cross-Validation, StratifiedKFold).
 *   **5. Further Modeling Considerations:**
-    *   Highlight key activities for the modeling phase itself, such as hyperparameter tuning, feature importance analysis, and potentially iterating on feature engineering based on model performance.
+    *   Highlight key activities for the modeling phase itself, such as hyperparameter tuning, feature importance analysis, and iterating on feature engineering based on model insights.
 
 """
 
@@ -130,18 +130,15 @@ def _split_and_save_plan(unified_plan: str, eda_guidance_path: str, ml_plan_path
     part2_match = re.search(re.escape(part2_heading), unified_plan, re.IGNORECASE | re.MULTILINE)
 
     if part1_match and part2_match:
-        part1_content_start_index = part1_match.end() # Start *after* the heading
-        part2_content_start_index = part2_match.end() # Start *after* the heading
-        part2_heading_start_index = part2_match.start() # Start *of* the heading
-
-        # Extract Part 1: From end of Part 1 heading to start of Part 2 heading
+        part1_content_start_index = part1_match.end() 
+        part2_content_start_index = part2_match.end() 
+        part2_heading_start_index = part2_match.start() 
         eda_plan_part = unified_plan[part1_content_start_index:part2_heading_start_index].strip()
-        # Extract Part 2: From end of Part 2 heading to the end of the string
         ml_plan_part = unified_plan[part2_content_start_index:].strip()
 
     elif part1_match:
          print("⚠ Warning: Found EDA Guidance (Part 1) heading but not ML Plan (Part 2) heading.", file=sys.stderr)
-         eda_plan_part = unified_plan[part1_match.end():].strip() # Take everything after Part 1 heading
+         eda_plan_part = unified_plan[part1_match.end():].strip() 
          ml_plan_part = "# Error: ML Plan (Part 2) marker not found in LLM response."
     else:
         print("❌ Error: Could not find 'Part 1: EDA & Preprocessing Guidance' heading marker in LLM response.", file=sys.stderr)

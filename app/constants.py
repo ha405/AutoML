@@ -9,7 +9,7 @@ SCRIPTS_PATH_REL = os.path.join("app", "scripts")
 VISUALIZATIONS_PATH_REL = os.path.join("app", "visualizations")
 
 EDA_CODE_FILE_PATH = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL, "Eda_code.py")
-EDA_GUIDANCE_PLAN = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL, "eda_plan.txt")
+EDA_GUIDANCE_PLAN = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL, "eda_guidance_plan.txt")
 EDA_LOGS_FILE_PATH = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL, "data_analysis_logs.txt")
 ML_PLAN = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL, "ml_plan.txt")
 ML_CODE_FILE_PATH = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL, "ML.py")

@@ -30,40 +30,62 @@ app.config["SESSION_FILE_DIR"] = os.path.join(os.getcwd(), ".flask_session")
 app.config["SESSION_PERMANENT"] = False
 Session(app)
 
+
 @app.route("/api/home", methods=["POST"])
 def api_home():
     prompt = request.form.get("queryInput")
     upload = request.files.get("file-upload")
     session.clear()
     filedetails = {}
-
     try:
         if upload:
+            if not upload.filename.lower().endswith('.csv'):
+                 # app.logger.warning(f"Invalid file type uploaded: {upload.filename}") # Removed logging
+                 return jsonify(error="Only CSV files are allowed."), 400
             os.makedirs(os.path.dirname(DATASET_PATH), exist_ok=True)
             upload.save(DATASET_PATH)
             filedetails = filepreprocess(DATASET_PATH)
             if filedetails.get("error"):
-                app.logger.error(f"File preprocessing error: {filedetails['error']}")
+                # app.logger.error(f"File preprocessing error: {filedetails['error']}") # Removed logging
                 return jsonify(error=filedetails["error"]), 400
         elif prompt:
             filedetails = {"info": "Proceeding with text prompt only."}
             if os.path.exists(DATASET_PATH):
                 try: os.remove(DATASET_PATH)
-                except OSError as e: app.logger.warning(f"Could not remove previous dataset file {DATASET_PATH}: {e}")
+                except OSError as e: pass # app.logger.warning(f"Could not remove previous dataset file {DATASET_PATH}: {e}") # Removed logging
         else:
             return jsonify(error="Provide a prompt or a CSV file."), 400
     except Exception as e:
-        app.logger.error(f"Error during file upload/processing: {e}", exc_info=True)
+        # app.logger.error(f"Error during file upload/processing: {e}", exc_info=True) # Removed logging
         return jsonify(error="Failed to process input.", details=str(e)), 500
 
     serialized_filedetails = _serialize(filedetails)
     session["filedetails"] = serialized_filedetails
-    initial_conversation = [
+
+    initial_context = [
         f"User: {prompt or 'Analyze uploaded file.'}",
         f"System: {feedback.SYSTEM_PROMPT_INITIAL}",
         f"FileDetails: {serialized_filedetails}"
     ]
-    session["conversation"] = initial_conversation
+
+    try:
+        initial_conversation_state, _initial_final_problem = feedback.process_feedback(initial_context)
+        session["conversation"] = initial_conversation_state
+        session["final_problem"] = None
+        # app.logger.info(f"Initialized conversation: {initial_conversation_state}") # Removed logging
+    except Exception as e:
+         # app.logger.error(f"Failed to process initial feedback for conversation start: {e}", exc_info=True) # Removed logging
+         session["conversation"] = [
+             f"User: {prompt or 'Analyze uploaded file.'}",
+             "System: Error generating initial AI response."
+         ]
+         session["final_problem"] = None
+         return jsonify({
+             "conversation": session.get("conversation", []),
+             "filedetails": session.get("filedetails", {}),
+             "final_problem": None,
+             "error": "AI failed to generate initial response."
+         }), 500
 
     return jsonify({
         "conversation": session.get("conversation", []),
@@ -78,47 +100,46 @@ def api_conversation():
     final_problem = session.get("final_problem")
 
     if not conversation:
-        return jsonify({"error": "No active conversation found."}), 404
+        # app.logger.warning("API call to /api/conversation with no active session conversation.") # Removed logging
+        return jsonify({"error": "No active conversation found. Please start over."}), 404
 
     if request.method == "POST":
         data = request.get_json()
         if not data or "user_response" not in data:
             return jsonify({"error": "Missing 'user_response' in request body."}), 400
 
-        user_response = data["user_response"]
-        current_conversation = session.get("conversation", [])
+        user_response = data["user_response"].strip()
+        if not user_response:
+            return jsonify({"error": "User response cannot be empty."}), 400
+
+        current_conversation = list(session.get("conversation", []))
         current_conversation.append(f"User: {user_response}")
-        current_conversation.append(f"System: {feedback.SYSTEM_PROMPT_NEXT_ITERATION}")
-        session["conversation"] = current_conversation
 
         try:
             updated_conversation, new_final_problem = feedback.process_feedback(current_conversation)
+
             session["conversation"] = updated_conversation
             if new_final_problem:
                 session["final_problem"] = new_final_problem
                 final_problem = new_final_problem
-            elif "final_problem" in session:
-                final_problem = session["final_problem"]
+                # app.logger.info(f"Final problem determined: {new_final_problem}") # Removed logging
             else:
-                 final_problem = None
+                session.pop("final_problem", None)
+                final_problem = None
+                # app.logger.debug("Conversation continues, final problem cleared/not set.") # Removed logging
 
         except Exception as e:
-            app.logger.error(f"Failed to process feedback on POST: {e}", exc_info=True)
-            pass
+            # app.logger.error(f"Failed to process feedback on POST: {e}", exc_info=True) # Removed logging
+            return jsonify({
+                "error": "AI failed to process your response.",
+                "conversation": current_conversation,
+                "final_problem": session.get("final_problem"),
+                "final_problem_determined": bool(session.get("final_problem"))
+            }), 500
 
     elif request.method == "GET":
-        if "final_problem" not in session: 
-            try:
-                current_conversation = session.get("conversation", [])
-                if current_conversation:
-                    updated_conversation, new_final_problem = feedback.process_feedback(current_conversation)
-                    session["conversation"] = updated_conversation
-                    if new_final_problem:
-                        session["final_problem"] = new_final_problem
-                        final_problem = new_final_problem 
-            except Exception as e:
-                app.logger.error(f"Failed to process feedback on GET: {e}", exc_info=True)
-                pass 
+        # app.logger.debug(f"GET /api/conversation retrieving state: Conversation length {len(conversation)}, Final problem set: {bool(final_problem)}") # Removed logging
+        pass
 
     return jsonify({
         "conversation": session.get("conversation", []),
@@ -156,7 +177,6 @@ def api_dataanalysis():
          app.logger.error(f"Dataset file specified but not found: {dataset_full_path}")
          return jsonify(error=f"Dataset file not found. Please re-upload."), 400
 
-    # --- Read EDA Guidance Plan ---
     eda_guidance = ""
     if os.path.exists(eda_guidance_full_path):
         try:
@@ -211,25 +231,22 @@ def api_dataanalysis():
             )
 
             log_content = f"--- EDA Attempt #{attempts + 1} ---\nRC: {result.returncode}\n--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}\n"
-            # Overwrite log on first attempt, append after
+
             with open(EDA_LOGS_FILE_PATH, 'w' if attempts == 0 else 'a', encoding='utf-8') as log:
                 log.write(log_content + "="*20 + "\n")
-            session["eda_output_logs"] = log_content # Store last attempt log
+            session["eda_output_logs"] = log_content 
 
             if result.returncode == 0:
                 app.logger.info(f"EDA code executed successfully on attempt #{attempts + 1}.")
                 return jsonify(status="success", output=result.stdout), 200
 
-            # --- Execution Failed ---
             last_error_output = result.stderr if result.stderr else result.stdout
             app.logger.warning(f"EDA Attempt #{attempts + 1} failed. RC: {result.returncode}. Error: {last_error_output[:500]}...")
-            # Increment attempts *after* checking result
             attempts += 1
             if attempts >= MAX_ATTEMPTS:
                  app.logger.error(f"EDA execution failed after maximum ({MAX_ATTEMPTS}) attempts.")
-                 break # Exit the while loop
+                 break 
 
-            # --- Attempt to Fix ---
             app.logger.info(f"Attempting EDA code correction (for execution attempt #{attempts})...")
             try:
                 fixed_code = eda_fix.attempt_code_fix(
@@ -243,11 +260,9 @@ def api_dataanalysis():
                 if fixed_code and fixed_code.strip() and not fixed_code.strip().startswith("# Error"):
                     app.logger.info(f"Fix obtained for attempt #{attempts}. Saving corrected code.")
                     if data_analysis.save_code_to_file(fixed_code, eda_code_full_path):
-                         current_code = fixed_code # Update current_code for the next execution attempt
-                         # Loop continues to retry execution with fixed code
+                         current_code = fixed_code 
                     else:
                         app.logger.error(f"Attempt #{attempts}: Failed to save corrected EDA code. Retrying with previous code.")
-                        # Loop continues, but will retry with the *old* code again
                 else:
                     app.logger.warning(f"EDA Fix attempt after execution attempt #{attempts} did not yield usable code. Retrying with previous code.")
                     # Loop continues, retrying with the old code
@@ -412,11 +427,8 @@ def api_ml():
                 app.logger.error(f"ML execution failed after maximum ({MAX_ML_EXEC_ATTEMPTS}) attempts.")
                 break
 
-            # --- Attempt to Fix ---
-            app.logger.info(f"Attempting ML code correction (Exec Attempt #{attempts})...") # attempts is now incremented
+            app.logger.info(f"Attempting ML code correction (Exec Attempt #{attempts})...") 
             try:
-                # Pass EDA logs to the fixer
-                # !!! IMPORTANT: Ensure ml_fix.attempt_ml_code_fix accepts eda_output_logs !!!
                 fixed_code = ml_fix.attempt_ml_code_fix(
                     broken_ml_code=current_code, # Use code that just failed
                     error_message=last_error_output,
@@ -425,7 +437,7 @@ def api_ml():
                     ml_plan=ml_plan, # Pass plan
                     eda_output_logs=eda_output_logs # Pass EDA logs
                 )
-
+                print(fixed_code)
                 if fixed_code and fixed_code.strip() and not fixed_code.strip().startswith("# Error"):
                      app.logger.info(f"ML code fix obtained for attempt #{attempts}.")
                      if not MachineLearning.save_ml_code_to_file(fixed_code, ml_code_full_path):
@@ -454,7 +466,7 @@ def api_ml():
             log_content = f"--- Execution Attempt #{attempts + 1} ---\nReturn Code: TIMEOUT\nError: {error_details}\n" + "="*20 + "\n"
             with open(ml_logs_full_path, 'a', encoding='utf-8') as log: log.write(log_content)
             session["ml_output_logs"] = f"Attempt #{attempts + 1}: Timeout - {error_details}"
-            attempts += 1 # Increment after handling
+            attempts += 1
             if attempts >= MAX_ML_EXEC_ATTEMPTS:
                  app.logger.error(f"ML code execution failed due to timeout after maximum ({MAX_ML_EXEC_ATTEMPTS}) attempts.")
                  break
@@ -480,27 +492,62 @@ def api_ml():
 
 @app.route("/api/visualizationplanning", methods=["POST"])
 def api_visualization_planning():
-    final_problem = session.get("final_problem")
-    filedetails = session.get("filedetails")
+    # Gather context from session
+    business_problem = session.get("final_problem")
+    original_filedetails = session.get("filedetails")
+    processed_filedetails = session.get("processed_filedetails", {})
+
+    # Load codes and logs
     ml_code = load_code_from_file(ML_CODE_FILE_PATH)
-    ml_logs = open(ML_OUTPUT_LOGS_FILE).read() if os.path.exists(ML_OUTPUT_LOGS_FILE) else session.get("ml_output_logs", "")
-    if not final_problem or not filedetails or not ml_code:
+    ml_logs = ""
+    if os.path.exists(ML_OUTPUT_LOGS_FILE):
+        with open(ML_OUTPUT_LOGS_FILE, 'r', encoding='utf-8') as f:
+            ml_logs = f.read()
+    else:
+        ml_logs = session.get("ml_output_logs", "")
+
+    eda_code = load_code_from_file(EDA_CODE_FILE_PATH)
+    eda_logs = ""
+    if os.path.exists(EDA_LOGS_FILE_PATH):
+        with open(EDA_LOGS_FILE_PATH, 'r', encoding='utf-8') as f:
+            eda_logs = f.read()
+    else:
+        eda_logs = session.get("eda_output_logs", "")
+
+    # Dataset paths
+    original_dataset_path = DATASET_PATH
+    processed_dataset_path = PROCESSED_DATASET_PATH
+
+    if not business_problem or not original_filedetails:
         return jsonify(error="Missing inputs for visualization planning."), 400
 
-    details_str = "\n".join(f"- {k}: {v}" for k, v in filedetails.items() if k != 'sample_data')
+    # Build detail strings
+    details_original = "\n".join(f"- {k}: {v}" for k, v in original_filedetails.items())
+    details_processed = "\n".join(f"- {k}: {v}" for k, v in processed_filedetails.items())
+
+    # Generate plan
     plan = visualization_planner.generate_visualization_plan(
-        business_problem_str=final_problem,
-        file_details_str=details_str,
+        business_problem_str=business_problem,
+        file_details_original_str=details_original,
+        file_details_processed_str=details_processed,
+        original_dataset_path_str=original_dataset_path,
+        processed_dataset_path_str=processed_dataset_path,
         ml_code_str=ml_code,
-        ml_output_str=ml_logs
+        ml_output_logs_str=ml_logs,
+        eda_code_str=eda_code,
+        eda_output_logs_str=eda_logs
     )
+
     if not plan or plan.startswith("# Error"):
-        return jsonify(error="Visualization plan generation failed."), 500
+        return jsonify(error="Visualization plan generation failed.", details=plan), 500
+
     os.makedirs(os.path.dirname(VISUALIZATION_PLAN_FILE), exist_ok=True)
-    with open(VISUALIZATION_PLAN_FILE, 'w') as f:
+    with open(VISUALIZATION_PLAN_FILE, 'w', encoding='utf-8') as f:
         f.write(plan)
     session["visualization_plan"] = plan
-    return jsonify(status="plan_generated")
+
+    return jsonify(status="plan_generated"), 200
+
 
 @app.route("/api/visualizations", methods=["POST"])
 def api_visualizations():

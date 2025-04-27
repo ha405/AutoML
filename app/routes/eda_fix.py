@@ -2,8 +2,8 @@ import os
 import sys
 import re
 import time
+import traceback
 
-# --- Attempt to import google.generativeai ---
 try:
     import google.generativeai as genai
     print(f"INFO ({__file__}): Successfully imported google.generativeai.", file=sys.stderr)
@@ -11,31 +11,27 @@ except ImportError:
     print(f"WARNING ({__file__}): google.generativeai not installed. Code fixing disabled.", file=sys.stderr)
     genai = None
 
-# --- Global Client Initialization Block ---
 genai_client = None
 if genai:
     try:
-        GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
-        if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GOOGLE_AI_API_KEY":
-            raise ValueError("GOOGLE_API_KEY not set or is placeholder in environment variables")
-
+        GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY")
+        if not GEMINI_API_KEY:
+            GEMINI_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"
+            print(f"WARNING ({__file__}): GOOGLE_API_KEY not set in environment variables. Using placeholder key.", file=sys.stderr)
+        
         genai.configure(api_key=GEMINI_API_KEY)
-        MODEL_NAME = "gemini-2.0-flash" 
+        MODEL_NAME = "gemini-2.0-flash"
         genai_client = genai.GenerativeModel(MODEL_NAME)
         print(f"INFO ({__file__}): Gemini client configured for code fixing using model {MODEL_NAME}.", file=sys.stderr)
     except Exception as e:
         print(f"ERROR ({__file__}): Error setting up Gemini client for code fixing: {e}", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
         genai_client = None
 else:
     print(f"INFO ({__file__}): google.generativeai library not available. Client not configured.", file=sys.stderr)
+    genai_client = None
 
-print(f"INFO ({__file__}): Global genai_client state after setup: {type(genai_client)}", file=sys.stderr)
-
-# --- Helper Function ---
 def clean_llm_code_output(raw_code: str) -> str:
-    """
-    Strips Markdown code fences from LLM output and returns clean Python code.
-    """
     if not raw_code:
         return ""
     cleaned = raw_code.strip()
@@ -45,26 +41,27 @@ def clean_llm_code_output(raw_code: str) -> str:
         cleaned = cleaned[len("```"):].strip()
     if cleaned.endswith("```"):
         cleaned = cleaned[:-3].strip()
+    cleaned = re.sub(
+        r"^(here's|here is)\s+(the\s+)?(corrected|fixed|python\s+)?code:?\s*\n",
+        "",
+        cleaned,
+        flags=re.IGNORECASE
+    ).strip()
+    print("EDA_FIX_RETURN")
     return cleaned
 
-# --- Core Function (Uses Global Client) ---
 def attempt_code_fix(
     failing_code_str: str,
     error_output_str: str,
     dataset_path_str: str,
     business_problem_str: str,
     file_details_str: str,
-    eda_guidance: str 
+    eda_guidance: str
 ) -> str | None:
-    """
-    Uses the globally configured Gemini LLM client to propose a code fix,
-    considering the original EDA guidance plan.
-    """
     global genai_client
     if not genai_client:
         print(f"ERROR ({__file__}): Global Gemini client not available or not configured. Skipping code fix attempt.", file=sys.stderr)
         return None
-
     if not failing_code_str:
         print(f"WARNING ({__file__}): No failing code provided. Skipping code fix attempt.", file=sys.stderr)
         return None
@@ -72,15 +69,13 @@ def attempt_code_fix(
         print(f"WARNING ({__file__}): No error output provided. Skipping code fix attempt.", file=sys.stderr)
         return None
     if not eda_guidance:
-         print(f"WARNING ({__file__}): No EDA guidance provided to code fixer. Context will be limited.", file=sys.stderr)
-         eda_guidance = "# No EDA guidance available for context." # Placeholder
+        print(f"WARNING ({__file__}): No EDA guidance provided to code fixer. Context will be limited.", file=sys.stderr)
+        eda_guidance = "# No EDA guidance available for context."
 
-    # Limit context length
     error_snippet = error_output_str[:2000]
     file_details_snippet = file_details_str[:1000]
-    eda_guidance_snippet = eda_guidance[:2000] # Limit guidance length too
+    eda_guidance_snippet = eda_guidance[:2000]
 
-    # Refined Prompt including EDA Guidance
     prompt = f"""
 You are an expert Python code reviewer and fixer specializing in EDA and data preprocessing scripts.
 The following Python script encountered an error during execution. Your task is to:
@@ -111,3 +106,15 @@ The following Python script encountered an error during execution. Your task is 
 **Failing Python Code:**
 {failing_code_str}
 """
+    try:
+        response = genai_client.generate_content(contents={'parts': [{'text': prompt}]})
+        if response and getattr(response, 'parts', None):
+            raw_code = response.parts[0].text or ''
+            return clean_llm_code_output(raw_code)
+        else:
+            print(f"ERROR ({__file__}): No code returned from Gemini.", file=sys.stderr)
+            return None
+    except Exception as e:
+        print(f"ERROR ({__file__}): Exception during code fix: {e}", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
+        return None
