@@ -2,21 +2,35 @@
 Return Code: 0
 --- stdout ---
 Target column: price
-Baseline Model (LinearRegression) RMSE: Mean = 0.3786, Std = 0.1100
-Dummy Model RMSE: Mean = 0.9472, Std = 0.1934
-Random Forest Model RMSE: Mean = 0.2604, Std = 0.0597
-Chosen best model: RandomForestRegressor
-Test Set RMSE: 0.3322
-Test Set MAE: 0.2179
-Test Set R-squared: 0.9140
+Cross-validation results:
+Model: LinearRegression
+RMSE: Mean = 0.3742, Std = 0.0473
+Model: RandomForestRegressor
+RMSE: Mean = 0.3163, Std = 0.0466
+Model: GradientBoostingRegressor
+RMSE: Mean = 0.3422, Std = 0.0342
+Model: DummyRegressor
+RMSE: Mean = 0.9746, Std = 0.0747
 
-Top Feature Importances:
-       Feature  Importance
-6   enginesize    0.581511
-5   curbweight    0.159141
-13  highwaympg    0.114202
-10  horsepower    0.045453
-3     carwidth    0.023261
+Best model: RandomForestRegressor
+
+Test set evaluation:
+RMSE: 0.2349
+MAE: 0.1659
+R-squared: 0.9556
+
+Feature Importances:
+enginesize     0.561964
+curbweight     0.290547
+highwaympg     0.044018
+horsepower     0.023836
+CompanyName    0.013567
+carwidth       0.013510
+carlength      0.006950
+wheelbase      0.006520
+peakrpm        0.005382
+citympg        0.005075
+dtype: float64
 Trained model saved as trained_model.joblib
 
 --- stderr ---

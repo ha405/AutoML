@@ -1,8 +1,8 @@
 --- EDA Attempt #1 ---
 RC: 0
 --- stdout ---
+Initial Diagnostics:
 Shape: (205, 26)
-
 Columns with data types:
  car_ID                int64
 symboling             int64
@@ -61,22 +61,25 @@ highwaympg          0
 price               0
 dtype: int64
 
-Duplicate rows: 0
+Number of duplicate rows: 0
 
-Transformed DataFrame Head:
-    symboling  wheelbase  ...  fuelsystem_spdi  fuelsystem_spfi
-0   1.739942  -1.693703  ...        -0.214834        -0.070186
-1   1.739942  -1.693703  ...        -0.214834        -0.070186
-2   0.133842  -0.712220  ...        -0.214834        -0.070186
-3   0.936892   0.169452  ...        -0.214834        -0.070186
-4   0.936892   0.102911  ...        -0.214834        -0.070186
+Final Diagnostics:
+Transformed DataFrame head:
+    symboling  fueltype  ...  fuelsystem_spdi  fuelsystem_spfi
+0   1.743470 -0.328798  ...            False            False
+1   1.743470 -0.328798  ...            False            False
+2   0.133509 -0.328798  ...            False            False
+3   0.938490 -0.328798  ...            False            False
+4   0.938490 -0.328798  ...            False            False
 
-[5 rows x 53 columns]
-
-Transformed DataFrame Shape: (204, 53)
-
-Transformed DataFrame Data Types:
+[5 rows x 45 columns]
+New shape: (205, 45)
+Data types:
  symboling                float64
+fueltype                 float64
+aspiration               float64
+doornumber               float64
+enginelocation           float64
 wheelbase                float64
 carlength                float64
 carwidth                 float64
@@ -91,60 +94,47 @@ peakrpm                  float64
 citympg                  float64
 highwaympg               float64
 price                    float64
-fueltype_diesel          float64
-fueltype_gas             float64
-aspiration_std           float64
-aspiration_turbo         float64
-doornumber_four          float64
-doornumber_two           float64
-carbody_convertible      float64
-carbody_hardtop          float64
-carbody_hatchback        float64
-carbody_sedan            float64
-carbody_wagon            float64
-drivewheel_4wd           float64
-drivewheel_fwd           float64
-drivewheel_rwd           float64
-enginelocation_front     float64
-enginelocation_rear      float64
-enginetype_dohc          float64
-enginetype_dohcv         float64
-enginetype_l             float64
-enginetype_ohc           float64
-enginetype_ohcf          float64
-enginetype_ohcv          float64
-enginetype_rotor         float64
-cylindernumber_eight     float64
-cylindernumber_five      float64
-cylindernumber_four      float64
-cylindernumber_six       float64
-cylindernumber_three     float64
-cylindernumber_twelve    float64
-cylindernumber_two       float64
-fuelsystem_1bbl          float64
-fuelsystem_2bbl          float64
-fuelsystem_4bbl          float64
-fuelsystem_idi           float64
-fuelsystem_mfi           float64
-fuelsystem_mpfi          float64
-fuelsystem_spdi          float64
-fuelsystem_spfi          float64
+CompanyName              float64
+carbody_hardtop             bool
+carbody_hatchback           bool
+carbody_sedan               bool
+carbody_wagon               bool
+drivewheel_fwd              bool
+drivewheel_rwd              bool
+enginetype_dohcv            bool
+enginetype_l                bool
+enginetype_ohc              bool
+enginetype_ohcf             bool
+enginetype_ohcv             bool
+enginetype_rotor            bool
+cylindernumber_five         bool
+cylindernumber_four         bool
+cylindernumber_six          bool
+cylindernumber_three        bool
+cylindernumber_twelve       bool
+cylindernumber_two          bool
+fuelsystem_2bbl             bool
+fuelsystem_4bbl             bool
+fuelsystem_idi              bool
+fuelsystem_mfi              bool
+fuelsystem_mpfi             bool
+fuelsystem_spdi             bool
+fuelsystem_spfi             bool
 dtype: object
+Summary statistics:
+           symboling      fueltype  ...         price   CompanyName
+count  2.050000e+02  2.050000e+02  ...  2.050000e+02  2.050000e+02
+mean   4.332578e-17 -1.733031e-17  ...  1.992986e-16  2.079637e-16
+std    1.002448e+00  1.002448e+00  ...  1.002448e+00  1.002448e+00
+min   -2.281433e+00 -3.287980e-01  ... -1.023762e+00 -2.072510e+00
+25%   -6.714717e-01 -3.287980e-01  ... -6.887281e-01 -9.681461e-01
+50%    1.335090e-01 -3.287980e-01  ... -3.741476e-01 -2.154856e-02
+75%    9.384897e-01 -3.287980e-01  ...  4.048375e-01  1.082815e+00
+max    1.743470e+00  3.041381e+00  ...  4.030858e+00  1.398348e+00
 
-Transformed DataFrame Summary Statistics:
-           symboling     wheelbase  ...  fuelsystem_spdi  fuelsystem_spfi
-count  2.040000e+02  2.040000e+02  ...       204.000000     2.040000e+02
-mean  -6.095342e-17 -2.281399e-15  ...         0.000000    -2.176908e-17
-std    1.002460e+00  1.002460e+00  ...         1.002460     1.002460e+00
-min   -2.275308e+00 -2.026409e+00  ...        -0.214834    -7.018624e-02
-25%   -6.692084e-01 -7.122197e-01  ...        -0.214834    -7.018624e-02
-50%    1.338417e-01 -2.963369e-01  ...        -0.214834    -7.018624e-02
-75%    9.368917e-01  6.019700e-01  ...        -0.214834    -7.018624e-02
-max    1.739942e+00  3.679503e+00  ...         4.654747     1.424781e+01
+[8 rows x 20 columns]
 
-[8 rows x 53 columns]
-
-Processed data saved to e:\AI 602 (LLM Systems)\llmproj\AutoML\TestDatasets\Input_processed.csv
+Processed DataFrame saved to e:\AI 602 (LLM Systems)\llmproj\AutoML\TestDatasets\Input_processed.csv
 
 --- stderr ---
 

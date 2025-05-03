@@ -1,40 +1,31 @@
 *   **Overall Goal:** Analyze the initial data to understand its characteristics and prepare it for the likely ML task identified below. The aim is to produce a cleaned dataset (`processed_dataset.csv`) suitable for modeling.
 *   **1. Initial ML Task Assessment:**
-    *   Based on the business problem and initial data, what is the most probable ML task? (e.g., Binary Classification, Regression). Briefly justify.
-        *   Regression. The business problem aims to *predict* car prices, a continuous numerical value, based on other features. This aligns directly with a regression task.
-    *   Identify the most likely target variable column name. What is its apparent data type?
-        *   `price`. The data type is `float64`.
+    *   The most probable ML task is **Regression**. The business problem is to *estimate car prices*, making it a prediction of a continuous numerical value.
+    *   The most likely target variable column name is `price`. Its apparent data type is `float64`.
 *   **2. Target Variable Investigation:**
     *   **Guidance for EDA:**
-        *   Confirm the presence and data type of the potential target variable (`<target_variable_name>`). Are type conversions needed (e.g., object to numeric)?
-            *   Verify that the 'price' column is present and of a numeric type (float64). If not, investigate and correct.
-        *   Analyze its distribution. For classification, check for class imbalance. Quantify if significant imbalance exists, as this will impact modeling choices.
-            *   Analyze the distribution of 'price' using histograms and summary statistics (mean, median, standard deviation, skewness). Look for skewness or unusual patterns. Report these findings. Log transformation of the price target might be helpful to address skewness.
+        *   Confirm the presence of the `price` column and that its data type is indeed `float64`. No type conversions are expected at this stage.
+        *   Analyze the distribution of `price`. Examine its skewness. If significantly skewed, consider a transformation (e.g., log transformation) to improve model performance. Visualize the distribution using a histogram or kernel density plot and report skewness.
 *   **3. Feature Exploration & Refinement:**
     *   **Guidance for EDA:**
-        *   Identify columns that appear irrelevant (e.g., unique IDs, high cardinality free text) or redundant. Consider dropping them.
-            *   Carefully evaluate `symboling`. Although numeric, its meaning needs clarification. If it represents a subjective risk assessment or similar, consider its usefulness. Columns like car company names (if present in the original data) could be extracted but are not present in provided information.
-        *   Examine date/time columns. Could components like month, day of week, or time differences be useful features? Consider extracting or converting them.
-            *   No date/time columns are present in the initial data.
-        *   Investigate categorical features. Pay attention to those with potentially high cardinality. How might these be handled effectively (e.g., grouping, encoding strategies)?
-            *   For categorical features like `fueltype`, `aspiration`, `doornumber`, `carbody`, `drivewheel`, `enginelocation`, `enginetype`, `cylindernumber`, and `fuelsystem`, assess the number of unique values. For low-cardinality features, One-Hot Encoding (OHE) is suitable. For higher-cardinality features like `enginetype` and `fuelsystem`, consider grouping less frequent categories or using target encoding techniques.
-        *   Assess relationships: Explore correlations between numerical features and between features and the potential target.
-            *   Calculate the correlation matrix of numerical features. Visualize it using a heatmap to identify highly correlated features. Investigate the relationship between each numerical feature and `price` using scatter plots.
+        *   `car_ID` appears to be a unique identifier and is likely irrelevant for prediction. Consider dropping it.
+        *   The `CompanyName` column requires careful examination. Identify how many unique company names exist and whether there are any misspellings or variations that need to be corrected to consolidate categories.
+        *   Categorical features that are currently encoded as boolean (`fueltype_gas`, `aspiration_turbo`, etc.) are already in a suitable format. However, it would be important to verify that no unexpected values are present other than boolean.
+        *   Assess collinearity between numerical features like `wheelbase`, `carlength`, `carwidth`, `carheight`, `curbweight`, and `enginesize`. High correlation can lead to instability in some models. Report any high correlations (&gt;0.7 or &lt;-0.7).
+        *   Investigate the relationship between each numerical feature and the `price` variable. Scatter plots can be useful for visualizing these relationships.
 *   **4. Data Quality & Cleaning:**
     *   **Guidance for EDA:**
-        *   Thoroughly identify and profile missing values (NaNs, placeholders). Understand the extent and patterns of missingness.
-            *   The provided data indicates no missing values. However, in a real-world scenario, verify this assumption by explicitly checking for missing values represented as NaNs or other placeholders (e.g., "?", "-").
-        *   Based on the findings, consider appropriate imputation strategies for numerical (e.g., median, mean) and categorical (e.g., mode, 'Unknown' category) features. The EDA should implement a reasonable approach.
-            *   Since there are currently no missing values, imputation is not needed. However, the code should have a check for missing values.
+        *   The provided dataset details indicate no missing values. However, it's important to explicitly confirm this during the EDA process.
+        *   Check for outliers in numerical features. Box plots can be helpful. Decide on a strategy to handle outliers (e.g., trimming, capping, transformation).
 *   **5. Feature Representation:**
     *   **Guidance for EDA:**
-        *   Determine how categorical features should be represented numerically for modeling. Consider techniques like One-Hot Encoding (for lower cardinality) or alternatives for higher cardinality features identified earlier.
-            *   Apply One-Hot Encoding to categorical features with relatively low cardinality (e.g., `fueltype`, `aspiration`, `doornumber`, `carbody`, `drivewheel`, `enginelocation`). Handle higher cardinality features (`enginetype`, `cylindernumber`, `fuelsystem`) as determined in previous steps (grouping or target encoding).
-        *   Consider if numerical features require scaling (e.g., using StandardScaler or MinMaxScaler), especially if distance-based algorithms or regularized models are likely candidates later. Recommend applying scaling as a standard good practice.
-            *   Apply `StandardScaler` to scale the numerical features. This is crucial for algorithms sensitive to feature scaling (e.g., regularized linear models, neural networks).
+        *   The features that are already encoded as booleans don't require additional handling in terms of their representation.
+        *   Consider scaling numerical features using `StandardScaler` or `MinMaxScaler`. This is generally recommended for many ML algorithms.
 *   **6. Desired State of Output Dataset (`processed_dataset.csv`):**
     *   **Guidance for EDA:** The goal is to save a CSV named `processed_dataset.csv` where:
-        *   Columns represent the final selected/engineered features and the target variable.
+        *   Columns represent the final selected/engineered features and the target variable (`price`).
         *   All data is numerical (including encoded categoricals).
-        *   Missing values have been addressed appropriately.
-        *   The target variable is clean and in a suitable format for the ML task.
+        *   `car_ID` has been removed.
+        *   Inconsistencies in `CompanyName` are resolved.
+        *   Outliers are handled.
+        *   Features are scaled.

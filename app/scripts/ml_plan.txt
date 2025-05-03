@@ -1,30 +1,20 @@
 *   **1. Anticipated ML Task & Target:**
-    *   Reiterate the ML Task identified in Part 1.
-        *   Regression.
-    *   Confirm the expected target variable column name in `processed_dataset.csv`.
-        *   `price`.
+    *   The ML task is Regression.
+    *   The target variable is `price`.
 *   **2. Potential Feature Set:**
-    *   Describe the types of features expected in `processed_dataset.csv` (e.g., original numerical scaled, OHE features, engineered date features). Exact names depend on EDA execution, but list key original columns likely to be included in some form.
-        *   The feature set in `processed_dataset.csv` will consist of:
-            *   Scaled numerical features: `wheelbase`, `carlength`, `carwidth`, `carheight`, `curbweight`, `enginesize`, `boreratio`, `stroke`, `compressionratio`, `horsepower`, `peakrpm`, `citympg`, `highwaympg`, and potentially `symboling` (if retained).
-            *   One-Hot Encoded categorical features: derived from `fueltype`, `aspiration`, `doornumber`, `carbody`, `drivewheel`, and `enginelocation`.
-            *   Potentially grouped/target encoded features: derived from `enginetype`, `cylindernumber`, and `fuelsystem`.
+    *   Expect scaled versions of original numerical features like `wheelbase`, `carlength`, `carwidth`, `carheight`, `curbweight`, `enginesize`, `boreratio`, `stroke`, `compressionratio`, `horsepower`, `peakrpm`, `citympg`, and `highwaympg`.
+    *   Boolean (0/1) features representing `fueltype_gas`, `aspiration_turbo`, etc.
+    *   A cleaned and potentially encoded `CompanyName` feature, if the EDA reveals valuable company-specific effects.
 *   **3. Modeling Strategy:**
-    *   **Baseline Model(s):** Suggest simple baselines for comparison (e.g., Logistic Regression/Dummy Classifier for classification, Linear Regression/Dummy Regressor for regression).
-        *   Baseline: `LinearRegression` and `DummyRegressor` (using the mean or median as the prediction).
-    *   **Candidate Model(s):** Recommend 1-2 potentially stronger models based on the task (e.g., RandomForest, GradientBoosting, LightGBM). Briefly mention why they might be suitable.
-        *   `RandomForestRegressor`: Robust to outliers and can capture non-linear relationships.
-        *   `GradientBoostingRegressor` (e.g., XGBoost, LightGBM): Often provides high accuracy by combining multiple weak learners.
+    *   **Baseline Model(s):** Linear Regression or Dummy Regressor. These provide a simple benchmark.
+    *   **Candidate Model(s):**
+        *   RandomForestRegressor: Robust to outliers and can capture non-linear relationships.
+        *   GradientBoostingRegressor (e.g., XGBoost, LightGBM): Often provides high accuracy and handles mixed data types well.
 *   **4. Evaluation Approach:**
-    *   **Primary Metric:** Recommend a primary metric aligned with the business goal (e.g., F1-score, Accuracy, RMSE, MAE). Justify the recommendation.
-        *   `Root Mean Squared Error (RMSE)`: A common and interpretable metric for regression, penalizing larger errors more heavily. Aligned with predicting car prices as accurately as possible.
-    *   **Secondary Metrics:** Suggest other metrics to provide a more complete picture.
-        *   `Mean Absolute Error (MAE)`: Less sensitive to outliers than RMSE.
-        *   `R-squared (R2)`: Represents the proportion of variance in the target variable explained by the model.
-    *   **Validation:** Recommend a robust validation strategy (e.g., k-fold Cross-Validation, StratifiedKFold).
-        *   `k-fold Cross-Validation` (e.g., k=5 or 10): Provides a more reliable estimate of the model's performance by averaging the results across multiple train-test splits. Since there are no specific categorical splits to be aware of, `StratifiedKFold` is not required.
+    *   **Primary Metric:** Root Mean Squared Error (RMSE). It penalizes larger errors more heavily and is easily interpretable in the original price units.
+    *   **Secondary Metrics:** Mean Absolute Error (MAE) provides a less penalized view of average error. R-squared explains the variance in target variable explained by the model.
+    *   **Validation:** k-fold Cross-Validation (e.g., k=5 or 10) to get a reliable estimate of model performance on unseen data.
 *   **5. Further Modeling Considerations:**
-    *   Highlight key activities for the modeling phase itself, such as hyperparameter tuning, feature importance analysis, and iterating on feature engineering based on model insights.
-        *   `Hyperparameter tuning`: Use techniques like GridSearchCV or RandomizedSearchCV to optimize the hyperparameters of the chosen models.
-        *   `Feature importance analysis`: Determine the most influential features using model-specific methods (e.g., feature_importances_ for RandomForest, SHAP values). This information can guide further feature engineering and model simplification.
-        *   `Iterative feature engineering`: Based on model performance and feature importance, revisit feature engineering to create new features or refine existing ones.
+    *   Hyperparameter tuning for chosen models (e.g., using GridSearchCV or RandomizedSearchCV).
+    *   Feature importance analysis to understand which features are most influential in predicting car prices.
+    *   Iterate on feature engineering based on model performance and feature importance results. Consider interactions between features.
