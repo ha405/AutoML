@@ -2,11 +2,11 @@ from groq import Groq
 import os
 
 # --- Configuration ---
-API_KEY = os.environ.get("GROQ_API_KEY", "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")
+API_KEY = "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"
 MODEL_NAME = "llama3-70b-8192"
 
 try:
-    client = Groq()
+    client = Groq(api_key=API_KEY)
     print("Groq client configured for Visualization Planner.")
 except Exception as e:
     print(f"❌ Error configuring Groq client in Visualization Planner: {e}")

@@ -1,0 +1,24 @@
+--- Execution Attempt #1 ---
+Return Code: 0
+--- stdout ---
+Target column: price
+Baseline Model (LinearRegression) RMSE: Mean = 0.3786, Std = 0.1100
+Dummy Model RMSE: Mean = 0.9472, Std = 0.1934
+Random Forest Model RMSE: Mean = 0.2604, Std = 0.0597
+Chosen best model: RandomForestRegressor
+Test Set RMSE: 0.3322
+Test Set MAE: 0.2179
+Test Set R-squared: 0.9140
+
+Top Feature Importances:
+       Feature  Importance
+6   enginesize    0.581511
+5   curbweight    0.159141
+13  highwaympg    0.114202
+10  horsepower    0.045453
+3     carwidth    0.023261
+Trained model saved as trained_model.joblib
+
+--- stderr ---
+
+====================

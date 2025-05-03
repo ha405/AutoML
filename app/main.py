@@ -152,7 +152,7 @@ def api_superllm():
     final_problem = session.get("final_problem")
     nfiledetails = filepreprocess(PROCESSED_DATASET_PATH)
 
-    eda_code = load_code_from_file(EDA_CODE_FILE_PATH)
+    # eda_code = load_code_from_file(EDA_CODE_FILE_PATH)
     plan = AnalysisPlanner.generate_ml_plan(
         business_problem=final_problem,
         file_details=nfiledetails,
@@ -520,7 +520,7 @@ def api_visualization_planning():
 
     if not business_problem or not original_filedetails:
         return jsonify(error="Missing inputs for visualization planning."), 400
-
+    
     # Build detail strings
     details_original = "\n".join(f"- {k}: {v}" for k, v in original_filedetails.items())
     details_processed = "\n".join(f"- {k}: {v}" for k, v in processed_filedetails.items())
@@ -533,7 +533,7 @@ def api_visualization_planning():
         original_dataset_path_str=original_dataset_path,
         processed_dataset_path_str=processed_dataset_path,
         ml_code_str=ml_code,
-        ml_output_logs_str=ml_logs,
+        ml_output_str=ml_logs,
         eda_code_str=eda_code,
         eda_output_logs_str=eda_logs
     )
@@ -555,12 +555,15 @@ def api_visualizations():
     plan = open(VISUALIZATION_PLAN_FILE).read() if os.path.exists(VISUALIZATION_PLAN_FILE) else session.get("visualization_plan", "")
     if not final_problem or not plan:
         return jsonify(error="Visualization plan unavailable."), 400
+    
+    processed_data_prompt_path = PROCESSED_DATASET_PATH.replace("\\", "/")
+    viz_output_prompt_path = VISUALIZATION_OUTPUT_DIR.replace("\\", "/")
 
     viz_code = visualization_generator.generate_visualization_code(
         visualization_plan_str=plan,
-        processed_data_path_str=DATASET_PATH,
+        processed_data_path_str=processed_data_prompt_path,
         business_problem_str=final_problem,
-        visualization_output_dir_str=VISUALIZATION_OUTPUT_DIR
+        visualization_output_dir_str=viz_output_prompt_path
     )
     if not viz_code or viz_code.startswith("# Error"):
         return jsonify(error="Visualization code generation failed."), 500
@@ -568,8 +571,9 @@ def api_visualizations():
 
     res = subprocess.run(
         [sys.executable, VISUALIZATION_CODE_FILE_PATH],
-        capture_output=True, text=True
+        capture_output=True, text=True, check=False, timeout=180
     )
+    # app.logger.info(f"Visualization script executed successfully.")
     status = "success" if res.returncode == 0 else "error"
     return jsonify(status=status)
 

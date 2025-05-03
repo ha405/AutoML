@@ -25,6 +25,7 @@ except Exception as e:
 SYSTEM_INSTRUCTION_VISUALIZATION_GENERATOR_TEMPLATE = r"""
 You are an expert Python data visualization programmer. Your task is to generate a complete and executable Python script to create visualizations based strictly on the provided plan.
 
+Only include python code, nothing else. Don't even start with anything like "Here is the code" or similar statements. ONLY raw Python code.
 *Input Context:*
 
 <visualization_plan>
@@ -57,10 +58,12 @@ You are an expert Python data visualization programmer. Your task is to generate
     *   *Save Each Plot:* Save each generated plot to a separate file inside the <visualization_output_directory>. Use descriptive filenames, like visualization_1_histogram.png, visualization_2_scatterplot.png, etc. Use plt.savefig(os.path.join('{visualization_output_dir_str}', 'filename.png'), bbox_inches='tight') for matplotlib/seaborn plots. For plotly, use fig.write_image(os.path.join('{visualization_output_dir_str}', 'filename.png')) (this requires kaleido to be installed: pip install kaleido). If using plotly, add an import check for kaleido. Add plt.close() after saving matplotlib/seaborn plots to prevent them from displaying in non-interactive environments and overlapping.
 6.  *Error Handling:* Include basic error handling (e.g., try-except blocks) around individual plotting sections to prevent the entire script from crashing if one plot fails. Print informative error messages if a plot cannot be generated.
 7.  *Executable Script:* The final output must be only a complete, raw Python script, ready to be executed.
-8.  *No Extra Text:* Do NOT include any markdown formatting (like python ... ), explanations, comments (unless essential for complex logic), or introductory/concluding remarks. The script should start directly with the import statements.
+8.  *No Extra Text (Very Important):* Do NOT include any markdown formatting (like python ... ), explanations, comments (unless essential for complex logic), or introductory/concluding remarks. The script should start directly with the import statements.
 
 *Output Format:*
 *   Your response MUST contain ONLY the raw Python code for the script.
+
+Don't include anything else. ONLY give raw python code
 """
 
 # --- Generic Gemini Response Function (adapted from your other modules) ---
@@ -133,8 +136,14 @@ def generate_visualization_code(visualization_plan_str: str,
     # Generate the code
     viz_code = generate_response(prompt_content)
 
+    cleaned_code = viz_code.strip()
+    if cleaned_code.startswith("```python"):
+        cleaned_code = cleaned_code[len("```python"):].strip()
+    if cleaned_code.endswith("```"):
+        cleaned_code = cleaned_code[:-3].strip()
+
     print("Visualization Code Generation Complete.")
-    return viz_code
+    return cleaned_code
 
 # --- Function to Save Visualization Code ---
 def save_visualization_code(code: str, filename: str):

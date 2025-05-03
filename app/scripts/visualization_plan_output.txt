@@ -1,0 +1,37 @@
+### Overall Goal of Visualizations
+The primary objective of these visualizations is to communicate the key findings from the machine learning model and exploratory data analysis (EDA) to non-technical stakeholders, enabling them to understand the relationships between car attributes and prices.
+
+### Key Insights from ML & EDA
+
+1. The Random Forest model outperforms the baseline and dummy models in predicting car prices.
+2. Engine size, curb weight, highway MPG, horsepower, and car width are the most important features influencing car prices.
+3. The distribution of car prices and residuals from the model can provide insights into the model's performance.
+
+### Recommended Visualizations
+
+### Chart 1: Bar Chart
+**Insight:** Comparison of model performances
+**Justification:** A bar chart is suitable for comparing the performance of different models.
+**Data:** RMSE values for baseline, dummy, and Random Forest models
+**Tip:** Use a horizontal bar chart with model names on the x-axis and RMSE values on the y-axis. Add a title and labels.
+
+### Chart 2: Horizontal Bar Chart
+**Insight:** Feature importance
+**Justification:** A horizontal bar chart is suitable for displaying the importance of features in descending order.
+**Data:** Feature importances from the Random Forest model
+**Tip:** Use a horizontal bar chart with feature names on the y-axis and importance values on the x-axis. Add a title and labels.
+
+### Chart 3: Histogram
+**Insight:** Distribution of car prices
+**Justification:** A histogram is suitable for displaying the distribution of continuous data.
+**Data:** Car prices from the original dataset
+**Tip:** Use a histogram with car prices on the x-axis and frequency on the y-axis. Add a title and labels.
+
+### Chart 4: Scatter Plot
+**Insight:** Relationship between predicted and actual prices
+**Justification:** A scatter plot is suitable for displaying the relationship between two continuous variables.
+**Data:** Predicted and actual car prices from the test set
+**Tip:** Use a scatter plot with actual prices on the x-axis and predicted prices on the y-axis. Add a title and labels.
+
+### LLM Code Guidance
+Use Python libraries such as matplotlib and seaborn for creating the visualizations. For styling, use a clean and minimalistic approach with clear titles, labels, and annotations.
