@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -11,56 +11,62 @@ try:
     df_original = pd.read_csv("e:\\AI 602 (LLM Systems)\\llmproj\\AutoML\\TestDatasets\\Input_processed.csv")
     df = df_original.copy()
 except FileNotFoundError:
-    print("Error: Input_processed.csv not found. Please ensure the file exists at the specified path.")
+    print("Error: The file 'e:\\AI 602 (LLM Systems)\\llmproj\\AutoML\\TestDatasets\\Input_processed.csv' was not found.")
     exit()
 
 target_column = 'price'
-print(f"Target column: {target_column}")
+print(f"Target variable: {target_column}")
 
 y = df[target_column]
 X = df.drop(target_column, axis=1)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-model_lr = LinearRegression()
-model_rf = RandomForestRegressor(random_state=42)
-model_gbr = GradientBoostingRegressor(random_state=42)
-model_dummy = DummyRegressor(strategy="mean")
+# Model instantiation
+linear_regression = LinearRegression()
+dummy_regressor = DummyRegressor(strategy="mean")
+random_forest = RandomForestRegressor(random_state=42)
+gradient_boosting = GradientBoostingRegressor(random_state=42)
 
+# Cross-validation
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
 def evaluate_model(model, X, y, scoring='neg_root_mean_squared_error'):
     scores = cross_val_score(model, X, y, cv=kf, scoring=scoring)
-    rmse_scores = -scores
+    rmse_scores = -scores  # Convert negative RMSE to positive
     print(f"Model: {type(model).__name__}")
     print(f"RMSE: Mean = {rmse_scores.mean():.4f}, Std = {rmse_scores.std():.4f}")
     return rmse_scores.mean()
 
 print("Cross-validation results:")
-rmse_lr = evaluate_model(model_lr, X_train, y_train)
-rmse_rf = evaluate_model(model_rf, X_train, y_train)
-rmse_gbr = evaluate_model(model_gbr, X_train, y_train)
-rmse_dummy = evaluate_model(model_dummy, X_train, y_train)
+linear_regression_rmse = evaluate_model(linear_regression, X_train, y_train)
+dummy_regressor_rmse = evaluate_model(dummy_regressor, X_train, y_train)
+random_forest_rmse = evaluate_model(random_forest, X_train, y_train)
+gradient_boosting_rmse = evaluate_model(gradient_boosting, X_train, y_train)
 
+# Choose the best model based on cross-validation RMSE
 best_model = None
 best_rmse = float('inf')
 
-if rmse_lr < best_rmse:
-    best_rmse = rmse_lr
-    best_model = model_lr
-if rmse_rf < best_rmse:
-    best_rmse = rmse_rf
-    best_model = model_rf
-if rmse_gbr < best_rmse:
-    best_rmse = rmse_gbr
-    best_model = model_gbr
+if linear_regression_rmse < best_rmse:
+    best_model = linear_regression
+    best_rmse = linear_regression_rmse
+if random_forest_rmse < best_rmse:
+    best_model = random_forest
+    best_rmse = random_forest_rmse
+if gradient_boosting_rmse < best_rmse:
+    best_model = gradient_boosting
+    best_rmse = gradient_boosting_rmse
 
 print(f"\nBest model: {type(best_model).__name__}")
 
+# Train the best model on the entire training set
 best_model.fit(X_train, y_train)
 
+# Make predictions on the test set
 y_pred = best_model.predict(X_test)
 
+# Evaluate the model on the test set
 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 mae = mean_absolute_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
@@ -70,20 +76,14 @@ print(f"RMSE: {rmse:.4f}")
 print(f"MAE: {mae:.4f}")
 print(f"R-squared: {r2:.4f}")
 
-if isinstance(best_model, (RandomForestRegressor, LinearRegression)):
-    try:
-        if hasattr(best_model, 'feature_importances_'):
-            importances = best_model.feature_importances_
-            feature_importances = pd.Series(importances, index=X.columns)
-            print("\nFeature Importances:")
-            print(feature_importances.sort_values(ascending=False).head(10))
-        elif hasattr(best_model, 'coef_'):
-            coefficients = best_model.coef_
-            feature_coefficients = pd.Series(coefficients, index=X.columns)
-            print("\nFeature Coefficients:")
-            print(feature_coefficients.sort_values(ascending=False).head(10))
-    except Exception as e:
-        print(f"Error getting feature importances: {e}")
+# Feature Importance
+if isinstance(best_model, RandomForestRegressor) or isinstance(best_model, GradientBoostingRegressor):
+    importances = best_model.feature_importances_
+    feature_importances = pd.Series(importances, index=X.columns)
+    print("\nTop 10 Feature Importances:")
+    print(feature_importances.nlargest(10))
 
-joblib.dump(best_model, 'trained_model.joblib')
-print("Trained model saved as trained_model.joblib")
+# Save the trained model
+model_filename = "trained_model.joblib"
+joblib.dump(best_model, model_filename)
+print(f"\nTrained model saved to: {model_filename}")

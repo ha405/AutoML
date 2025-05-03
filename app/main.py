@@ -528,9 +528,9 @@ def api_visualization_planning():
     # Generate plan
     plan = visualization_planner.generate_visualization_plan(
         business_problem_str=business_problem,
-        file_details_original_str=details_original,
+        # file_details_original_str=details_original,
         file_details_processed_str=details_processed,
-        original_dataset_path_str=original_dataset_path,
+        # original_dataset_path_str=original_dataset_path,
         processed_dataset_path_str=processed_dataset_path,
         ml_code_str=ml_code,
         ml_output_str=ml_logs,
@@ -559,12 +559,19 @@ def api_visualizations():
     processed_data_prompt_path = PROCESSED_DATASET_PATH.replace("\\", "/")
     viz_output_prompt_path = VISUALIZATION_OUTPUT_DIR.replace("\\", "/")
 
+    processed_file_details = filepreprocess(PROCESSED_DATASET_PATH)
+    processed_file_details_str = _serialize(processed_file_details)
+    ml_output_logs_str = load_logs_from_file(ML_OUTPUT_LOGS_FILE)
+
     viz_code = visualization_generator.generate_visualization_code(
         visualization_plan_str=plan,
         processed_data_path_str=processed_data_prompt_path,
         business_problem_str=final_problem,
-        visualization_output_dir_str=viz_output_prompt_path
+        visualization_output_dir_str=viz_output_prompt_path,
+        processed_file_details_str=processed_file_details_str,
+        ml_output_logs_str=ml_output_logs_str
     )
+
     if not viz_code or viz_code.startswith("# Error"):
         return jsonify(error="Visualization code generation failed."), 500
     visualization_generator.save_visualization_code(viz_code, VISUALIZATION_CODE_FILE_PATH)

@@ -1,37 +1,38 @@
 --- Execution Attempt #1 ---
 Return Code: 0
 --- stdout ---
-Target column: price
+Target variable: price
 Cross-validation results:
 Model: LinearRegression
-RMSE: Mean = 0.3742, Std = 0.0473
-Model: RandomForestRegressor
-RMSE: Mean = 0.3163, Std = 0.0466
-Model: GradientBoostingRegressor
-RMSE: Mean = 0.3422, Std = 0.0342
+RMSE: Mean = 2871.1343, Std = 635.4650
 Model: DummyRegressor
-RMSE: Mean = 0.9746, Std = 0.0747
+RMSE: Mean = 7766.6508, Std = 595.3500
+Model: RandomForestRegressor
+RMSE: Mean = 2544.4089, Std = 401.1604
+Model: GradientBoostingRegressor
+RMSE: Mean = 2672.5936, Std = 320.2426
 
 Best model: RandomForestRegressor
 
 Test set evaluation:
-RMSE: 0.2349
-MAE: 0.1659
-R-squared: 0.9556
+RMSE: 1844.9503
+MAE: 1288.2720
+R-squared: 0.9569
 
-Feature Importances:
-enginesize     0.561964
-curbweight     0.290547
-highwaympg     0.044018
-horsepower     0.023836
-CompanyName    0.013567
-carwidth       0.013510
-carlength      0.006950
-wheelbase      0.006520
-peakrpm        0.005382
-citympg        0.005075
+Top 10 Feature Importances:
+enginesize         0.556499
+curbweight         0.290503
+highwaympg         0.045915
+horsepower         0.028998
+carwidth           0.012793
+carlength          0.007734
+CompanyName_bmw    0.007383
+wheelbase          0.007022
+citympg            0.006317
+peakrpm            0.005270
 dtype: float64
-Trained model saved as trained_model.joblib
+
+Trained model saved to: trained_model.joblib
 
 --- stderr ---
 

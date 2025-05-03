@@ -1,31 +1,42 @@
 *   **Overall Goal:** Analyze the initial data to understand its characteristics and prepare it for the likely ML task identified below. The aim is to produce a cleaned dataset (`processed_dataset.csv`) suitable for modeling.
 *   **1. Initial ML Task Assessment:**
-    *   The most probable ML task is **Regression**. The business problem is to *estimate car prices*, making it a prediction of a continuous numerical value.
-    *   The most likely target variable column name is `price`. Its apparent data type is `float64`.
+    *   Based on the business problem and initial data, what is the most probable ML task? (e.g., Binary Classification, Regression). Briefly justify.
+        *   Regression is the most probable ML task. The business problem aims to predict car prices, which is a continuous numerical value.
+    *   Identify the most likely target variable column name. What is its apparent data type?
+        *   `price` is the most likely target variable. The data type is float64.
 *   **2. Target Variable Investigation:**
     *   **Guidance for EDA:**
-        *   Confirm the presence of the `price` column and that its data type is indeed `float64`. No type conversions are expected at this stage.
-        *   Analyze the distribution of `price`. Examine its skewness. If significantly skewed, consider a transformation (e.g., log transformation) to improve model performance. Visualize the distribution using a histogram or kernel density plot and report skewness.
+        *   Confirm the presence and data type of the potential target variable (`price`). Are type conversions needed (e.g., object to numeric)?
+            *   Verify that the `price` column exists and is of type `float64`. If not, investigate and correct.
+        *   Analyze its distribution. For classification, check for class imbalance. Quantify if significant imbalance exists, as this will impact modeling choices.
+            *   Plot a histogram and calculate descriptive statistics (mean, median, standard deviation, skewness) to understand the distribution of `price`. Check for outliers. Since this is a Regression task class imbalance is not applicable.
 *   **3. Feature Exploration & Refinement:**
     *   **Guidance for EDA:**
-        *   `car_ID` appears to be a unique identifier and is likely irrelevant for prediction. Consider dropping it.
-        *   The `CompanyName` column requires careful examination. Identify how many unique company names exist and whether there are any misspellings or variations that need to be corrected to consolidate categories.
-        *   Categorical features that are currently encoded as boolean (`fueltype_gas`, `aspiration_turbo`, etc.) are already in a suitable format. However, it would be important to verify that no unexpected values are present other than boolean.
-        *   Assess collinearity between numerical features like `wheelbase`, `carlength`, `carwidth`, `carheight`, `curbweight`, and `enginesize`. High correlation can lead to instability in some models. Report any high correlations (&gt;0.7 or &lt;-0.7).
-        *   Investigate the relationship between each numerical feature and the `price` variable. Scatter plots can be useful for visualizing these relationships.
+        *   Identify columns that appear irrelevant (e.g., unique IDs, high cardinality free text) or redundant. Consider dropping them.
+            *   The initial dataset includes boolean features for each company name. Since "CompanyName" can be extracted from car name, there are high chances of multicollinearity, these columns need to be investigated.
+            *   The columns `CompanyName_toyouta` and `CompanyName_vokswagen` seem to be typos for `CompanyName_toyota` and `CompanyName_volkswagen` respectively. These need to be corrected and consolidated.
+            *   The `symboling` variable may need further scrutiny to determine its relevance.
+        *   Examine date/time columns. Could components like month, day of week, or time differences be useful features? Consider extracting or converting them.
+            *   No date/time columns are present.
+        *   Investigate categorical features. Pay attention to those with potentially high cardinality. How might these be handled effectively (e.g., grouping, encoding strategies)?
+            *   Categorical features like `carbody`, `fueltype`, `aspiration`, `doornumber`, `drivewheel`, `enginelocation`, `enginetype`, `cylindernumber`, and `fuelsystem` need to be explored. For higher cardinality categorical features, consider techniques like frequency encoding or target encoding, balancing the risk of overfitting.
+        *   Assess relationships: Explore correlations between numerical features and between features and the potential target.
+            *   Calculate the correlation matrix for numerical features and visualize it using a heatmap. Also, calculate the correlation between each numerical feature and the target variable 'price'.
 *   **4. Data Quality & Cleaning:**
     *   **Guidance for EDA:**
-        *   The provided dataset details indicate no missing values. However, it's important to explicitly confirm this during the EDA process.
-        *   Check for outliers in numerical features. Box plots can be helpful. Decide on a strategy to handle outliers (e.g., trimming, capping, transformation).
+        *   Thoroughly identify and profile missing values (NaNs, placeholders). Understand the extent and patterns of missingness.
+            *   The provided information indicates no missing values are present initially. However, verify this programmatically to ensure there aren't any hidden missing values represented by special characters or unusual values.
+        *   Based on the findings, consider appropriate imputation strategies for numerical (e.g., median, mean) and categorical (e.g., mode, 'Unknown' category) features. The EDA should implement a reasonable approach.
+            *   If any missing values are identified, apply suitable imputation techniques. Justify the choice of imputation method based on the distribution and nature of the missing data.
 *   **5. Feature Representation:**
     *   **Guidance for EDA:**
-        *   The features that are already encoded as booleans don't require additional handling in terms of their representation.
-        *   Consider scaling numerical features using `StandardScaler` or `MinMaxScaler`. This is generally recommended for many ML algorithms.
+        *   Determine how categorical features should be represented numerically for modeling. Consider techniques like One-Hot Encoding (for lower cardinality) or alternatives for higher cardinality features identified earlier.
+            *   Apply One-Hot Encoding to categorical features with relatively low cardinality (e.g., `fueltype`, `aspiration`, `doornumber`, `enginelocation`). For features with higher cardinality like `enginetype` or `fuelsystem`, explore alternative encoding methods like frequency encoding or target encoding, and be mindful of potential overfitting.
+        *   Consider if numerical features require scaling (e.g., using StandardScaler or MinMaxScaler), especially if distance-based algorithms or regularized models are likely candidates later. Recommend applying scaling as a standard good practice.
+            *   Apply StandardScaler or MinMaxScaler to numerical features to ensure they are on a similar scale. This can improve the performance of many machine learning algorithms, especially those sensitive to feature scaling.
 *   **6. Desired State of Output Dataset (`processed_dataset.csv`):**
     *   **Guidance for EDA:** The goal is to save a CSV named `processed_dataset.csv` where:
-        *   Columns represent the final selected/engineered features and the target variable (`price`).
+        *   Columns represent the final selected/engineered features and the target variable.
         *   All data is numerical (including encoded categoricals).
-        *   `car_ID` has been removed.
-        *   Inconsistencies in `CompanyName` are resolved.
-        *   Outliers are handled.
-        *   Features are scaled.
+        *   Missing values have been addressed appropriately.
+        *   The target variable is clean and in a suitable format for the ML task.

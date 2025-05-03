@@ -1,7 +1,6 @@
 --- EDA Attempt #1 ---
 RC: 0
 --- stdout ---
-Initial Diagnostics:
 Shape: (205, 26)
 Columns with data types:
  car_ID                int64
@@ -63,78 +62,46 @@ dtype: int64
 
 Number of duplicate rows: 0
 
-Final Diagnostics:
-Transformed DataFrame head:
-    symboling  fueltype  ...  fuelsystem_spdi  fuelsystem_spfi
-0   1.743470 -0.328798  ...            False            False
-1   1.743470 -0.328798  ...            False            False
-2   0.133509 -0.328798  ...            False            False
-3   0.938490 -0.328798  ...            False            False
-4   0.938490 -0.328798  ...            False            False
+Transformed DataFrame Head:
+    symboling  wheelbase  ...  CompanyName_volkswagen  CompanyName_volvo
+0   1.743470  -1.690772  ...                   False              False
+1   1.743470  -1.690772  ...                   False              False
+2   0.133509  -0.708596  ...                   False              False
+3   0.938490   0.173698  ...                   False              False
+4   0.938490   0.107110  ...                   False              False
 
-[5 rows x 45 columns]
-New shape: (205, 45)
-Data types:
- symboling                float64
-fueltype                 float64
-aspiration               float64
-doornumber               float64
-enginelocation           float64
-wheelbase                float64
-carlength                float64
-carwidth                 float64
-carheight                float64
-curbweight               float64
-enginesize               float64
-boreratio                float64
-stroke                   float64
-compressionratio         float64
-horsepower               float64
-peakrpm                  float64
-citympg                  float64
-highwaympg               float64
-price                    float64
-CompanyName              float64
-carbody_hardtop             bool
-carbody_hatchback           bool
-carbody_sedan               bool
-carbody_wagon               bool
-drivewheel_fwd              bool
-drivewheel_rwd              bool
-enginetype_dohcv            bool
-enginetype_l                bool
-enginetype_ohc              bool
-enginetype_ohcf             bool
-enginetype_ohcv             bool
-enginetype_rotor            bool
-cylindernumber_five         bool
-cylindernumber_four         bool
-cylindernumber_six          bool
-cylindernumber_three        bool
-cylindernumber_twelve       bool
-cylindernumber_two          bool
-fuelsystem_2bbl             bool
-fuelsystem_4bbl             bool
-fuelsystem_idi              bool
-fuelsystem_mfi              bool
-fuelsystem_mpfi             bool
-fuelsystem_spdi             bool
-fuelsystem_spfi             bool
-dtype: object
-Summary statistics:
-           symboling      fueltype  ...         price   CompanyName
-count  2.050000e+02  2.050000e+02  ...  2.050000e+02  2.050000e+02
-mean   4.332578e-17 -1.733031e-17  ...  1.992986e-16  2.079637e-16
-std    1.002448e+00  1.002448e+00  ...  1.002448e+00  1.002448e+00
-min   -2.281433e+00 -3.287980e-01  ... -1.023762e+00 -2.072510e+00
-25%   -6.714717e-01 -3.287980e-01  ... -6.887281e-01 -9.681461e-01
-50%    1.335090e-01 -3.287980e-01  ... -3.741476e-01 -2.154856e-02
-75%    9.384897e-01 -3.287980e-01  ...  4.048375e-01  1.082815e+00
-max    1.743470e+00  3.041381e+00  ...  4.030858e+00  1.398348e+00
+[5 rows x 68 columns]
 
-[8 rows x 20 columns]
+Transformed DataFrame Shape: (205, 68)
 
-Processed DataFrame saved to e:\AI 602 (LLM Systems)\llmproj\AutoML\TestDatasets\Input_processed.csv
+Transformed DataFrame Data Types:
+ symboling                 float64
+wheelbase                 float64
+carlength                 float64
+carwidth                  float64
+carheight                 float64
+                           ...   
+CompanyName_saab             bool
+CompanyName_subaru           bool
+CompanyName_toyota           bool
+CompanyName_volkswagen       bool
+CompanyName_volvo            bool
+Length: 68, dtype: object
+
+Transformed DataFrame Summary Statistics:
+           symboling     wheelbase  ...    highwaympg         price
+count  2.050000e+02  2.050000e+02  ...  2.050000e+02    205.000000
+mean   4.332578e-17 -1.291108e-15  ...  1.473076e-16  13276.710571
+std    1.002448e+00  1.002448e+00  ...  1.002448e+00   7988.852332
+min   -2.281433e+00 -2.023713e+00  ... -2.147310e+00   5118.000000
+25%   -6.714717e-01 -7.085959e-01  ... -8.371954e-01   7788.000000
+50%    1.335090e-01 -2.924196e-01  ... -1.093538e-01  10295.000000
+75%    9.384897e-01  6.065210e-01  ...  4.729195e-01  16503.000000
+max    1.743470e+00  3.686225e+00  ...  3.384286e+00  45400.000000
+
+[8 rows x 15 columns]
+
+Processed data saved to: e:\AI 602 (LLM Systems)\llmproj\AutoML\TestDatasets\Input_processed.csv
 
 --- stderr ---
 

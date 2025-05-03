@@ -1,11 +1,44 @@
-### Chart 1: Bar Chart
-**Business Insight:** Engine size is the biggest price factor
-**Business Value:** Helps the manager understand the key driver of car prices, enabling informed decisions on car design and pricing
-**Data:** Feature importance values (engine size, curbweight, highwaympg, etc.)
-**Clarity Tip:** Title: "How Key Features Influence Car Price", X-axis: "Feature", Y-axis: "Impact on Price", Annotate the bar for engine size to highlight its significance
+**SME Visualization Plan: Car Price Prediction**
 
-### Chart 2: Scatter Plot
-**Business Insight:** The model accurately predicts prices with an average error of $2349
-**Business Value:** Enables the manager to trust the model's predictions and make informed decisions on market entry pricing
-**Data:** Actual vs. Predicted 'price' values
-**Clarity Tip:** Title: "Model Prediction Accuracy", X-axis: "Actual Price", Y-axis: "Predicted Price", Add a dashed line for perfect prediction and annotate the average error value
+1.  **Overall Goal (Business Focus):**
+    To illustrate typical car prices, show price relationships with key features, identify main price drivers, and assess the prediction model's reliability for strategic decisions.
+
+### Chart 1: Histogram - Distribution of Car Prices
+
+*   **Type:** Histogram
+*   **Business Insight:** Understanding the typical range and frequency of car prices in the dataset.
+*   **Business Value:** Sets a baseline understanding of the car price market and what the model is predicting.
+*   **Data Source:** 'price' column from the processed data (Input_processed.csv), as confirmed by the EDA.
+*   **Clarity Tip:** Title: "Distribution of Car Prices"; Annotate with average price (approximately 13276.71 based on EDA summary statistics) and median price (approximately 10295 based on EDA summary statistics).  Use a bin size that clearly shows the distribution.
+
+### Chart 2: Scatter Plot - Car Price Relationship with Engine Size
+
+*   **Type:** Scatter Plot
+*   **Business Insight:** Visualizing the relationship between car price and engine size, the most influential continuous feature.
+*   **Business Value:** Shows how engine size directly impacts car price, informing decisions about engine design and marketing.
+*   **Data Source:** 'price' and 'enginesize' columns from the processed data (Input_processed.csv). Engine size is identified as the most important feature in the ML output logs.
+*   **Clarity Tip:** Title: "Car Price Relationship with Engine Size"; X-axis: Engine Size; Y-axis: Car Price. Add a trend line to highlight the relationship.
+
+### Chart 3: Bar Chart (Horizontal) - Key Factors Influencing Car Price
+
+*   **Type:** Bar Chart (Horizontal Recommended)
+*   **Business Insight:** Ranking the factors identified by the ML model as most impactful on car price.
+*   **Business Value:** Pinpoints features management can potentially manipulate or focus on to influence car prices.
+*   **Data Source:** Feature importances extracted from the ML output logs. The top 10 features and their importances are: enginesize (0.556499), curbweight (0.290503), highwaympg (0.045915), horsepower (0.028998), carwidth (0.012793), carlength (0.007734), CompanyName_bmw (0.007383), wheelbase (0.007022), citympg (0.006317), peakrpm (0.005270).
+*   **Clarity Tip:** Title: "Key Factors Influencing Car Price"; X-axis: Feature Importance; Y-axis: Feature Name. Highlight the top 2-3 features (enginesize, curbweight, highwaympg) with a different color or annotation.
+
+### Chart 4: Scatter Plot - Model Prediction Accuracy: Actual vs. Predicted Car Price
+
+*   **Type:** Scatter Plot
+*   **Business Insight:** Assessing the overall accuracy and reliability of the ML model's predictions.
+*   **Business Value:** Builds confidence (or flags issues) in using the model for car price estimations.
+*   **Data Source:** Actual car prices (y_test) vs. Predicted car prices (y_pred) from the ML output logs. R-squared value from the logs: 0.9569.
+*   **Clarity Tip:** Title: "Model Prediction Accuracy: Actual vs. Predicted Car Price"; X-axis: Actual Car Price; Y-axis: Predicted Car Price. Annotate with R-squared = 0.9569. Add a y=x reference line to easily visualize prediction accuracy.
+
+### Chart 5: Histogram - Typical Range of Prediction Error
+
+*   **Type:** Histogram
+*   **Business Insight:** Understanding the typical size and distribution of prediction errors (residuals).
+*   **Business Value:** Quantifies the model's uncertainty, helping managers understand the likely +/- range for predictions.
+*   **Data Source:** Residuals (Actual Price - Predicted Price).  MAE from the ML output logs: 1288.2720.
+*   **Clarity Tip:** Title: "Typical Range of Prediction Error"; X-axis: Prediction Error (Residual); Y-axis: Frequency. Annotate with Mean Absolute Error (MAE) = 1288.27. Center the histogram around zero.
