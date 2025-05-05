@@ -2,10 +2,12 @@ import os
 import sys
 import subprocess
 import time
+import json
 
 from flask import Flask, request, session, jsonify, send_from_directory
 from flask_session import Session
-from routes import feedback, MachineLearning, data_analysis, visualization_planner, visualization_generator, eda_fix, ml_fix, AnalysisPlanner
+from routes import feedback, MachineLearning, data_analysis, visualization_planner, visualization_generator, eda_fix, ml_fix, AnalysisPlanner, vision_model
+from routes.chatbp import chat_bp
 from utils import filepreprocess, load_code_from_file, load_logs_from_file, _serialize
 from constants import (
     DATASET_PATH,
@@ -19,6 +21,7 @@ from constants import (
     VISUALIZATION_PLAN_FILE,
     VISUALIZATION_CODE_FILE_PATH,
     VISUALIZATION_OUTPUT_DIR,
+    FRONTEND_JSON_PATH,
     MAX_ATTEMPTS,MAX_FIX_ATTEMPTS,MAX_ML_EXEC_ATTEMPTS,MAX_ML_FIX_ATTEMPTS
 )
 
@@ -72,9 +75,7 @@ def api_home():
         initial_conversation_state, _initial_final_problem = feedback.process_feedback(initial_context)
         session["conversation"] = initial_conversation_state
         session["final_problem"] = None
-        # app.logger.info(f"Initialized conversation: {initial_conversation_state}") # Removed logging
     except Exception as e:
-         # app.logger.error(f"Failed to process initial feedback for conversation start: {e}", exc_info=True) # Removed logging
          session["conversation"] = [
              f"User: {prompt or 'Analyze uploaded file.'}",
              "System: Error generating initial AI response."
@@ -100,7 +101,6 @@ def api_conversation():
     final_problem = session.get("final_problem")
 
     if not conversation:
-        # app.logger.warning("API call to /api/conversation with no active session conversation.") # Removed logging
         return jsonify({"error": "No active conversation found. Please start over."}), 404
 
     if request.method == "POST":
@@ -122,14 +122,11 @@ def api_conversation():
             if new_final_problem:
                 session["final_problem"] = new_final_problem
                 final_problem = new_final_problem
-                # app.logger.info(f"Final problem determined: {new_final_problem}") # Removed logging
             else:
                 session.pop("final_problem", None)
                 final_problem = None
-                # app.logger.debug("Conversation continues, final problem cleared/not set.") # Removed logging
 
         except Exception as e:
-            # app.logger.error(f"Failed to process feedback on POST: {e}", exc_info=True) # Removed logging
             return jsonify({
                 "error": "AI failed to process your response.",
                 "conversation": current_conversation,
@@ -151,11 +148,12 @@ def api_conversation():
 def api_superllm():
     final_problem = session.get("final_problem")
     nfiledetails = filepreprocess(PROCESSED_DATASET_PATH)
-
-    # eda_code = load_code_from_file(EDA_CODE_FILE_PATH)
+    viz_output_prompt_path = VISUALIZATION_OUTPUT_DIR.replace("\\", "/")
+    eda_code = load_code_from_file(EDA_CODE_FILE_PATH)
     plan = AnalysisPlanner.generate_ml_plan(
         business_problem=final_problem,
         file_details=nfiledetails,
+        vis_output_dir=viz_output_prompt_path
     )
     if not plan:
         return jsonify(error="ML plan generation failed."), 500
@@ -169,7 +167,7 @@ def api_dataanalysis():
     dataset_full_path = os.path.abspath(DATASET_PATH)
     eda_code_full_path = os.path.abspath(EDA_CODE_FILE_PATH)
     eda_guidance_full_path = os.path.abspath(EDA_GUIDANCE_PLAN) 
-
+    viz_output_prompt_path = VISUALIZATION_OUTPUT_DIR.replace("\\", "/")
     if not final_problem or not filedetails:
         app.logger.error("Data analysis request missing problem or file details in session.")
         return jsonify(error="Missing business problem or file details."), 400
@@ -199,7 +197,8 @@ def api_dataanalysis():
             filedetails=filedetails,
             business_problem=final_problem,
             file_path=dataset_full_path,
-            eda_guidance=eda_guidance
+            eda_guidance=eda_guidance,
+            viz_directory=viz_output_prompt_path,
         )
         if not eda_code or eda_code.strip().startswith("# Error"):
             app.logger.error(f"Initial EDA code generation failed. Response: {eda_code}")
@@ -255,7 +254,7 @@ def api_dataanalysis():
                     dataset_path_str=dataset_full_path,
                     business_problem_str=final_problem,
                     file_details_str=str(filedetails),
-                    eda_guidance=eda_guidance # Pass guidance to fixer
+                    eda_guidance=eda_guidance,
                 )
                 if fixed_code and fixed_code.strip() and not fixed_code.strip().startswith("# Error"):
                     app.logger.info(f"Fix obtained for attempt #{attempts}. Saving corrected code.")
@@ -308,7 +307,7 @@ def api_ml():
     final_problem = session.get("final_problem")
     ml_plan = None
     processed_dataset_details = None
-
+    viz_output_prompt_path = VISUALIZATION_OUTPUT_DIR.replace("\\", "/")
     processed_dataset_full_path = os.path.abspath(PROCESSED_DATASET_PATH)
     ml_plan_full_path = os.path.abspath(ML_PLAN) 
     ml_code_full_path = os.path.abspath(ML_CODE_FILE_PATH)
@@ -367,7 +366,8 @@ def api_ml():
             business_problem=final_problem,
             file_path=processed_dataset_full_path,
             ml_plan=ml_plan, # Pass the plan content
-            eda_output_logs=eda_output_logs #
+            eda_output_logs=eda_output_logs, #,
+            viz_directory = viz_output_prompt_path
         )
         # --- End Pass eda_output_logs ---
         if not ml_code or ml_code.strip().startswith("# Error"):
@@ -435,7 +435,7 @@ def api_ml():
                     dataset_path=processed_dataset_full_path,
                     business_goal=final_problem,
                     ml_plan=ml_plan, # Pass plan
-                    eda_output_logs=eda_output_logs # Pass EDA logs
+                    eda_output_logs=eda_output_logs 
                 )
                 print(fixed_code)
                 if fixed_code and fixed_code.strip() and not fixed_code.strip().startswith("# Error"):
@@ -490,99 +490,23 @@ def api_ml():
         details=last_error_output
     ), 500
 
-@app.route("/api/visualizationplanning", methods=["POST"])
-def api_visualization_planning():
-    # Gather context from session
-    business_problem = session.get("final_problem")
-    original_filedetails = session.get("filedetails")
-    processed_filedetails = session.get("processed_filedetails", {})
-
-    # Load codes and logs
-    ml_code = load_code_from_file(ML_CODE_FILE_PATH)
-    ml_logs = ""
-    if os.path.exists(ML_OUTPUT_LOGS_FILE):
-        with open(ML_OUTPUT_LOGS_FILE, 'r', encoding='utf-8') as f:
-            ml_logs = f.read()
-    else:
-        ml_logs = session.get("ml_output_logs", "")
-
-    eda_code = load_code_from_file(EDA_CODE_FILE_PATH)
-    eda_logs = ""
-    if os.path.exists(EDA_LOGS_FILE_PATH):
-        with open(EDA_LOGS_FILE_PATH, 'r', encoding='utf-8') as f:
-            eda_logs = f.read()
-    else:
-        eda_logs = session.get("eda_output_logs", "")
-
-    # Dataset paths
-    original_dataset_path = DATASET_PATH
-    processed_dataset_path = PROCESSED_DATASET_PATH
-
-    if not business_problem or not original_filedetails:
-        return jsonify(error="Missing inputs for visualization planning."), 400
-    
-    # Build detail strings
-    details_original = "\n".join(f"- {k}: {v}" for k, v in original_filedetails.items())
-    details_processed = "\n".join(f"- {k}: {v}" for k, v in processed_filedetails.items())
-
-    # Generate plan
-    plan = visualization_planner.generate_visualization_plan(
-        business_problem_str=business_problem,
-        # file_details_original_str=details_original,
-        file_details_processed_str=details_processed,
-        # original_dataset_path_str=original_dataset_path,
-        processed_dataset_path_str=processed_dataset_path,
-        ml_code_str=ml_code,
-        ml_output_str=ml_logs,
-        eda_code_str=eda_code,
-        eda_output_logs_str=eda_logs
-    )
-
-    if not plan or plan.startswith("# Error"):
-        return jsonify(error="Visualization plan generation failed.", details=plan), 500
-
-    os.makedirs(os.path.dirname(VISUALIZATION_PLAN_FILE), exist_ok=True)
-    with open(VISUALIZATION_PLAN_FILE, 'w', encoding='utf-8') as f:
-        f.write(plan)
-    session["visualization_plan"] = plan
-
-    return jsonify(status="plan_generated"), 200
-
-
-@app.route("/api/visualizations", methods=["POST"])
-def api_visualizations():
+@app.route("/api/vlm", methods=["POST"])
+def api_vlm():
     final_problem = session.get("final_problem")
-    plan = open(VISUALIZATION_PLAN_FILE).read() if os.path.exists(VISUALIZATION_PLAN_FILE) else session.get("visualization_plan", "")
-    if not final_problem or not plan:
-        return jsonify(error="Visualization plan unavailable."), 400
-    
-    processed_data_prompt_path = PROCESSED_DATASET_PATH.replace("\\", "/")
+    if not final_problem:
+        return jsonify(error="Business problem not found in session."), 400
     viz_output_prompt_path = VISUALIZATION_OUTPUT_DIR.replace("\\", "/")
-
-    processed_file_details = filepreprocess(PROCESSED_DATASET_PATH)
-    processed_file_details_str = _serialize(processed_file_details)
-    ml_output_logs_str = load_logs_from_file(ML_OUTPUT_LOGS_FILE)
-
-    viz_code = visualization_generator.generate_visualization_code(
-        visualization_plan_str=plan,
-        processed_data_path_str=processed_data_prompt_path,
-        business_problem_str=final_problem,
-        visualization_output_dir_str=viz_output_prompt_path,
-        processed_file_details_str=processed_file_details_str,
-        ml_output_logs_str=ml_output_logs_str
+    success = vision_model.generate_plot_explanations(
+        business_problem=final_problem,
+        viz_directory=viz_output_prompt_path
     )
+    if not success:
+        return jsonify(error="Failed to generate plot explanations."), 500
+    return jsonify(status="success"), 200
 
-    if not viz_code or viz_code.startswith("# Error"):
-        return jsonify(error="Visualization code generation failed."), 500
-    visualization_generator.save_visualization_code(viz_code, VISUALIZATION_CODE_FILE_PATH)
+app.register_blueprint(chat_bp, url_prefix="/api")
 
-    res = subprocess.run(
-        [sys.executable, VISUALIZATION_CODE_FILE_PATH],
-        capture_output=True, text=True, check=False, timeout=180
-    )
-    # app.logger.info(f"Visualization script executed successfully.")
-    status = "success" if res.returncode == 0 else "error"
-    return jsonify(status=status)
+
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")

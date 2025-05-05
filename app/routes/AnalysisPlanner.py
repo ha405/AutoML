@@ -5,7 +5,13 @@ import re
 import google.generativeai as genai
 from constants import AUTOML_ROOT_DIR, SCRIPTS_PATH_REL
 
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
+# Try to get API key from environment variable first
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+# If not found in environment, use the hardcoded key
+if not GEMINI_API_KEY:
+    GEMINI_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"
+
 MODEL_NAME = "gemini-2.0-flash"
 
 OUTPUT_DIR_BASE = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL)
@@ -17,18 +23,36 @@ ML_PLAN_TXT_FILE_PATH = os.path.join(OUTPUT_DIR_BASE, "ml_plan.txt")
 client = None
 client_configured = False
 
-if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GOOGLE_AI_API_KEY":
-    print(
-        "⚠ Warning: Google API Key not set or is placeholder."
-        " Ensure the GOOGLE_API_KEY environment variable is set correctly.",
-        file=sys.stderr
-    )
-else:
-    genai.configure(api_key=GEMINI_API_KEY)
-    client = genai.GenerativeModel(MODEL_NAME)
-    print(f"Google AI client configured for Guided Planner using model {MODEL_NAME}.")
-    client_configured = True
+def configure_client():
+    global client, client_configured
+    try:
+        if not GEMINI_API_KEY:
+            raise ValueError("No API key available from environment or configuration")
+        
+        genai.configure(api_key=GEMINI_API_KEY)
+        client = genai.GenerativeModel(MODEL_NAME)
+        
+        # Test the configuration with a simple request
+        test_response = client.generate_content("Test")
+        if not test_response or not test_response.text:
+            raise Exception("Failed to get valid response from API")
+            
+        client_configured = True
+        print(f"Google AI client successfully configured for Guided Planner using model {MODEL_NAME}.")
+        return True
+    except Exception as e:
+        print(
+            f"⚠ Error configuring Google AI client: {str(e)}\n"
+            "Ensure either:\n"
+            "1. The GOOGLE_API_KEY environment variable is set correctly, or\n"
+            "2. A valid API key is provided in the configuration",
+            file=sys.stderr
+        )
+        client_configured = False
+        return False
 
+# Configure client on module import
+configure_client()
 
 SYSTEM_TEMPLATE_GUIDED_PLANNER = r"""
 You are an expert Senior Data Scientist creating a **Unified Analysis & ML Plan**.
@@ -82,6 +106,12 @@ Output **ONLY** the Markdown formatted plan below, starting *exactly* with "### 
         *   All data is numerical (including encoded categoricals).
         *   Missing values have been addressed appropriately.
         *   The target variable is clean and in a suitable format for the ML task.
+*   **7. Visualization Prompts:**
+    *   Provide simple, non-technical plot prompts to illustrate key findings, such as:
+        *   "Show me a bar chart of counts for each category in `<target_variable_name>`."   
+        *   "Display a line chart of `<important_feature>` over time."   
+        *   "Create a histogram of `<numeric_feature>` to visualize its distribution."   
+    Focus on intuitive graphs that help stakeholders understand the data, avoiding data science jargon.
 
 **Part 2: Machine Learning Plan**
 
@@ -99,7 +129,12 @@ Output **ONLY** the Markdown formatted plan below, starting *exactly* with "### 
     *   **Validation:** Recommend a robust validation strategy (e.g., k-fold Cross-Validation, StratifiedKFold).
 *   **5. Further Modeling Considerations:**
     *   Highlight key activities for the modeling phase itself, such as hyperparameter tuning, feature importance analysis, and iterating on feature engineering based on model insights.
-
+*   **6. Visualization Prompts:**
+    *   Suggest simple, non-technical graph prompts to help explain model results and data relationships, for example:
+        *   "Create a histogram comparing predicted vs actual `<target_variable_name>` values."   
+        *   "Show a bar chart of average `<important_feature>` by predicted class."   
+        *   "Display a scatter plot of `<feature_x>` versus `<feature_y>` colored by prediction outcome."   
+    Emphasize clear visuals that support understanding of model outputs without performance metric jargon.
 """
 
 def _call_model(prompt: str) -> str:
@@ -164,7 +199,8 @@ def _split_and_save_plan(unified_plan: str, eda_guidance_path: str, ml_plan_path
 
 def generate_ml_plan(
     business_problem: str,
-    file_details: dict
+    file_details: dict,
+    vis_output_dir:str
 ) -> str:
     missing = []
     if not business_problem:

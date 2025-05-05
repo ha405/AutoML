@@ -16,13 +16,13 @@ if genai:
     try:
         GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY")
         if not GEMINI_API_KEY:
-            GEMINI_API_KEY = "YOUR_API_KEY_HERE"
+            GEMINI_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"
             print(f"WARNING ({__file__}): GOOGLE_API_KEY not set in environment variables. Using placeholder key.", file=sys.stderr)
             if GEMINI_API_KEY == "YOUR_API_KEY_HERE":
                  print(f"ERROR ({__file__}): Placeholder API Key detected. Gemini client will likely fail. Please set GOOGLE_API_KEY environment variable.", file=sys.stderr)
 
         genai.configure(api_key=GEMINI_API_KEY)
-        MODEL_NAME = "gemini-1.5-flash-latest"
+        MODEL_NAME = "gemini-2.0-flash"
         safety_settings = [
             {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
             {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},

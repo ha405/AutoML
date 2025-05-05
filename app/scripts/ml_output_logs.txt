@@ -1,38 +1,17 @@
 --- Execution Attempt #1 ---
 Return Code: 0
 --- stdout ---
-Target variable: price
-Cross-validation results:
-Model: LinearRegression
-RMSE: Mean = 2871.1343, Std = 635.4650
-Model: DummyRegressor
-RMSE: Mean = 7766.6508, Std = 595.3500
-Model: RandomForestRegressor
-RMSE: Mean = 2544.4089, Std = 401.1604
-Model: GradientBoostingRegressor
-RMSE: Mean = 2672.5936, Std = 320.2426
-
-Best model: RandomForestRegressor
-
-Test set evaluation:
-RMSE: 1844.9503
-MAE: 1288.2720
-R-squared: 0.9569
-
-Top 10 Feature Importances:
-enginesize         0.556499
-curbweight         0.290503
-highwaympg         0.045915
-horsepower         0.028998
-carwidth           0.012793
-carlength          0.007734
-CompanyName_bmw    0.007383
-wheelbase          0.007022
-citympg            0.006317
-peakrpm            0.005270
-dtype: float64
-
-Trained model saved to: trained_model.joblib
+Target variable: sales_volume
+Linear Regression RMSE: Mean = 424568505783.4769, Std = 444978799175.2267
+Random Forest RMSE: Mean = 0.3050, Std = 0.1156
+Gradient Boosting RMSE: Mean = 0.3744, Std = 0.1112
+Chosen model: Random Forest Regressor
+Test Set RMSE: 0.0539
+Test Set MAE: 0.0276
+Test Set R-squared: 0.9975
+Trained model saved to trained_model.joblib
+Feature importance plot saved to d:/AutoML/app/visualizations/feature_importance.png
+Actual vs. Predicted plot saved to d:/AutoML/app/visualizations/actual_vs_predicted.png
 
 --- stderr ---
 

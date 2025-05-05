@@ -1,107 +1,93 @@
 --- EDA Attempt #1 ---
 RC: 0
 --- stdout ---
-Shape: (205, 26)
-Columns with data types:
- car_ID                int64
-symboling             int64
-CarName              object
-fueltype             object
-aspiration           object
-doornumber           object
-carbody              object
-drivewheel           object
-enginelocation       object
-wheelbase           float64
-carlength           float64
-carwidth            float64
-carheight           float64
-curbweight            int64
-enginetype           object
-cylindernumber       object
-enginesize            int64
-fuelsystem           object
-boreratio           float64
-stroke              float64
-compressionratio    float64
-horsepower            int64
-peakrpm               int64
-citympg               int64
-highwaympg            int64
-price               float64
+DataFrame Shape: (262, 5)
+
+Column List with Data Types:
+date             object
+datetime         object
+cash_type        object
+sales_volume    float64
+coffee_name      object
 dtype: object
 
-Missing values per column:
- car_ID              0
-symboling           0
-CarName             0
-fueltype            0
-aspiration          0
-doornumber          0
-carbody             0
-drivewheel          0
-enginelocation      0
-wheelbase           0
-carlength           0
-carwidth            0
-carheight           0
-curbweight          0
-enginetype          0
-cylindernumber      0
-enginesize          0
-fuelsystem          0
-boreratio           0
-stroke              0
-compressionratio    0
-horsepower          0
-peakrpm             0
-citympg             0
-highwaympg          0
-price               0
+Missing Values per Column:
+date            0
+datetime        0
+cash_type       0
+sales_volume    0
+coffee_name     0
 dtype: int64
 
-Number of duplicate rows: 0
+Number of Duplicate Rows: 2
 
 Transformed DataFrame Head:
-    symboling  wheelbase  ...  CompanyName_volkswagen  CompanyName_volvo
-0   1.743470  -1.690772  ...                   False              False
-1   1.743470  -1.690772  ...                   False              False
-2   0.133509  -0.708596  ...                   False              False
-3   0.938490   0.173698  ...                   False              False
-4   0.938490   0.107110  ...                   False              False
+   cash_type  ...  coffee_name_Vanilla with Irish whiskey
+0   1.527525  ...                               -0.108042
+1   1.527525  ...                               -0.108042
+2  -0.654654  ...                               -0.108042
+3  -0.654654  ...                               -0.108042
+4   1.527525  ...                               -0.108042
 
-[5 rows x 68 columns]
+[5 rows x 36 columns]
 
-Transformed DataFrame Shape: (205, 68)
+Transformed DataFrame Shape: (260, 36)
 
 Transformed DataFrame Data Types:
- symboling                 float64
-wheelbase                 float64
-carlength                 float64
-carwidth                  float64
-carheight                 float64
-                           ...   
-CompanyName_saab             bool
-CompanyName_subaru           bool
-CompanyName_toyota           bool
-CompanyName_volkswagen       bool
-CompanyName_volvo            bool
-Length: 68, dtype: object
+cash_type                                 float64
+sales_volume                              float64
+month                                     float64
+day_of_week                               float64
+day_of_year                               float64
+hour_of_day                               float64
+coffee_name_Americano                     float64
+coffee_name_Americano with milk           float64
+coffee_name_Cappuccino                    float64
+coffee_name_Caramel                       float64
+coffee_name_Caramel coffee                float64
+coffee_name_Caramel with Irish whiskey    float64
+coffee_name_Caramel with chocolate        float64
+coffee_name_Caramel with milk             float64
+coffee_name_Chocolate                     float64
+coffee_name_Chocolate with coffee         float64
+coffee_name_Chocolate with milk           float64
+coffee_name_Coffee with Irish whiskey     float64
+coffee_name_Coffee with chocolate         float64
+coffee_name_Double Irish whiskey          float64
+coffee_name_Double chocolate              float64
+coffee_name_Double espresso               float64
+coffee_name_Double espresso with milk     float64
+coffee_name_Double ristretto              float64
+coffee_name_Double vanilla                float64
+coffee_name_Espresso                      float64
+coffee_name_Hot milkshake                 float64
+coffee_name_Irish whiskey                 float64
+coffee_name_Irish whiskey with milk       float64
+coffee_name_Irish with chocolate          float64
+coffee_name_Latte                         float64
+coffee_name_Mochaccino                    float64
+coffee_name_Super chocolate               float64
+coffee_name_Tea                           float64
+coffee_name_Vanilla coffee                float64
+coffee_name_Vanilla with Irish whiskey    float64
+dtype: object
 
 Transformed DataFrame Summary Statistics:
-           symboling     wheelbase  ...    highwaympg         price
-count  2.050000e+02  2.050000e+02  ...  2.050000e+02    205.000000
-mean   4.332578e-17 -1.291108e-15  ...  1.473076e-16  13276.710571
-std    1.002448e+00  1.002448e+00  ...  1.002448e+00   7988.852332
-min   -2.281433e+00 -2.023713e+00  ... -2.147310e+00   5118.000000
-25%   -6.714717e-01 -7.085959e-01  ... -8.371954e-01   7788.000000
-50%    1.335090e-01 -2.924196e-01  ... -1.093538e-01  10295.000000
-75%    9.384897e-01  6.065210e-01  ...  4.729195e-01  16503.000000
-max    1.743470e+00  3.686225e+00  ...  3.384286e+00  45400.000000
+          cash_type  ...  coffee_name_Vanilla with Irish whiskey
+count  2.600000e+02  ...                            2.600000e+02
+mean   6.832142e-18  ...                            2.049643e-17
+std    1.001929e+00  ...                            1.001929e+00
+min   -6.546537e-01  ...                           -1.080424e-01
+25%   -6.546537e-01  ...                           -1.080424e-01
+50%   -6.546537e-01  ...                           -1.080424e-01
+75%    1.527525e+00  ...                           -1.080424e-01
+max    1.527525e+00  ...                            9.255629e+00
 
-[8 rows x 15 columns]
+[8 rows x 36 columns]
 
-Processed data saved to: e:\AI 602 (LLM Systems)\llmproj\AutoML\TestDatasets\Input_processed.csv
+Object type columns remaining: Index([], dtype='object')
+
+Processed DataFrame saved to d:\AutoML\TestDatasets\Input_processed.csv
 
 --- stderr ---
 

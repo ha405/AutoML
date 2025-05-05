@@ -18,6 +18,9 @@ VISUALIZATION_PLAN_FILE = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL, "visua
 VISUALIZATION_CODE_FILE_PATH = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL, "Visualizations.py")
 VISUALIZATION_OUTPUT_DIR = os.path.join(AUTOML_ROOT_DIR, VISUALIZATIONS_PATH_REL)
 
+# Frontend paths
+FRONTEND_PUBLIC_DIR = os.path.join(APP_DIR, "frontend", "public")
+FRONTEND_JSON_PATH = os.path.join(FRONTEND_PUBLIC_DIR, "data")
 
 # ----------------------Code Fix Attempts -----------------------------
 MAX_ATTEMPTS = 5

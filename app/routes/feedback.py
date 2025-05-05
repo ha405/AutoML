@@ -1,10 +1,6 @@
-import google.generativeai as genai
+from google import genai
 
-GOOGLE_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"  
-MODEL_NAME = "gemini-2.0-flash"
-
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel(MODEL_NAME)
+client = genai.Client(api_key="AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
 
 SYSTEM_PROMPT_INITIAL = """
 You are an AI assisting with business problem definition.
@@ -42,12 +38,27 @@ Continue the process.
 
 SYSTEM_PROMPT_FINAL_PROBLEM = """
 Now that you have indicated you are ready by responding with "Ready to formulate problem.", structure a **well-defined business problem statement** based on the entire conversation.
-Your response should ONLY include the final business problem statement and nothing else.
-Do not include any additional suggestions, next steps, or conversational text—only the final business problem.
+
+### **Key Requirements for the Problem Statement:**
+1. **It must be a statement, not a question.**  
+   - ❌ "How can we improve customer retention?" (Wrong)  
+   - ✅ "Customer retention rates have declined due to ineffective segmentation and engagement strategies." (Correct)  
+
+2. **It must focus on the actual business challenge, not the dataset.**  
+   - ❌ "How can we use customer segmentation data to identify churn drivers?" (Wrong)  
+   - ✅ "Customer churn is increasing due to a lack of personalized engagement strategies that target high-risk customers effectively." (Correct)  
+
+3. **It should integrate relevant insights from the dataset where necessary, but not be dependent on it.**  
+
+4. **It should be clear, concise, and actionable.**  
+
+Your response should ONLY include the final business problem statement and nothing else. Do not include any additional suggestions, next steps, or conversational text—only the final business problem statement.
 """
 
 def generate_response(messages):
-    response = model.generate_content(contents=messages)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash", contents=messages
+    )
     return response.text.strip()
 
 def process_feedback(conversation):

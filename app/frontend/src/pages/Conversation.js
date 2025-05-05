@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styles from './conversation_style.module.css';
 import { callApi } from '../api/client'; // Ensure this points to your API client function
 
@@ -40,6 +40,7 @@ Continue the process.
 
 export default function Conversation() {
   const { state } = useLocation();
+  const navigate = useNavigate();
   const [conversation, setConversation] = useState([]);
   const [userResponse, setUserResponse] = useState('');
   const [isFinal, setIsFinal] = useState(false);
@@ -136,7 +137,7 @@ export default function Conversation() {
         switch (step) {
           // --- Step 1: Generate Unified Plan (SuperLLM) ---
           case 'processing_plan':
-             setPipelineMessage('Generating Unified Analysis & ML Plan...');
+             setPipelineMessage('Planning Things Out...');
              apiEndpoint = 'superllm'; // Call the endpoint that triggers the planner
              resultData = await callApi(apiEndpoint, apiMethod);
              // Adjust success check based on actual backend response
@@ -147,7 +148,7 @@ export default function Conversation() {
 
           // --- Step 2: Run EDA (Guided by Plan) ---
           case 'processing_eda':
-            setPipelineMessage('Generating & Running Guided EDA...');
+            setPipelineMessage('Bruising Through Your Data...');
             apiEndpoint = 'dataanalysis';
             resultData = await callApi(apiEndpoint, apiMethod);
             success = resultData?.status === 'success';
@@ -157,33 +158,27 @@ export default function Conversation() {
 
           // --- Step 3: Run ML (Based on Plan & EDA Output) ---
           case 'processing_ml':
-             setPipelineMessage('Generating & Running ML Code...');
+             setPipelineMessage('Doing AI Magic...');
              apiEndpoint = 'ml';
              resultData = await callApi(apiEndpoint, apiMethod);
              success = resultData?.status === 'success';
-             if (!success) errorMessage = resultData?.error || resultData?.details || 'ML execution failed.';
-             else nextStep = 'processing_viz_plan'; // Next step is Viz Plan
-            break;
-
-          // --- Step 4: Generate Visualization Plan ---
-          case 'processing_viz_plan':
-             setPipelineMessage('Generating Visualization Plan...');
-             apiEndpoint = 'visualizationplanning';
-             resultData = await callApi(apiEndpoint, apiMethod);
-             success = resultData?.status === 'plan_generated';
-             if (!success) errorMessage = resultData?.error || resultData?.details || 'Visualization plan generation failed.';
-             else nextStep = 'processing_viz';
-            break;
-
-          // --- Step 5: Run Visualizations ---
-          case 'processing_viz':
-             setPipelineMessage('Generating & Running Visualizations...');
-             apiEndpoint = 'visualizations';
-             resultData = await callApi(apiEndpoint, apiMethod);
-             success = resultData?.status === 'success';
-             if (!success) errorMessage = resultData?.error || resultData?.message || 'Visualization execution failed.';
-             else nextStep = 'complete'; // Pipeline finishes
-            break;
+             if (!success) {
+                 errorMessage = resultData?.error || resultData?.details || 'ML execution failed.';
+             } else {
+                 // Call VLM right after ML success
+                 setPipelineMessage('Generating Visualisations...');
+                 try {
+                     const vlmResult = await callApi('vlm', 'POST');
+                     success = vlmResult?.status === 'success';
+                     if (!success) {
+                         console.warn('VLM generated warnings:', vlmResult?.error);
+                     }
+                 } catch (vlmError) {
+                     console.error('VLM processing error:', vlmError);
+                 }
+                 nextStep = 'complete'; // Skip visualization steps, go directly to complete
+             }
+             break;
 
           default:
             console.warn("Unknown pipeline step:", step);
@@ -208,24 +203,23 @@ export default function Conversation() {
           }
       }
     };
-
-    // --- Pipeline Trigger Logic (Updated Start) ---
     if (pipelineStatus === 'conversation_complete') {
       const timer = setTimeout(() => {
-         // Start with the Plan generation now
          setPipelineStatus('processing_plan');
       }, 500);
       return () => clearTimeout(timer);
     } else if (pipelineStatus.startsWith('processing_')) {
       runPipelineStep(pipelineStatus);
     } else if (pipelineStatus === 'complete') {
-        setPipelineMessage('Processing Complete! Visualizations generated.');
+        setPipelineMessage('Processing Complete! Redirecting to dashboard...');
         setIsLoading(false);
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
     } else if (pipelineStatus === 'error') {
         setIsLoading(false);
     }
-
-  }, [pipelineStatus]); // Keep dependency
+  }, [pipelineStatus, navigate]); // Added navigate to dependencies
 
 
   const handleSubmit = async (e) => {

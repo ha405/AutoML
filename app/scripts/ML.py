@@ -1,20 +1,22 @@
+import os
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, KFold, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.dummy import DummyRegressor
 import joblib
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 try:
-    df_original = pd.read_csv("e:\\AI 602 (LLM Systems)\\llmproj\\AutoML\\TestDatasets\\Input_processed.csv")
+    df_original = pd.read_csv('d:\\AutoML\\TestDatasets\\Input_processed.csv')
     df = df_original.copy()
 except FileNotFoundError:
-    print("Error: The file 'e:\\AI 602 (LLM Systems)\\llmproj\\AutoML\\TestDatasets\\Input_processed.csv' was not found.")
+    print("Error: The file 'd:\\AutoML\\TestDatasets\\Input_processed.csv' was not found.")
     exit()
 
-target_column = 'price'
+target_column = 'sales_volume'
 print(f"Target variable: {target_column}")
 
 y = df[target_column]
@@ -22,68 +24,59 @@ X = df.drop(target_column, axis=1)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Model instantiation
 linear_regression = LinearRegression()
-dummy_regressor = DummyRegressor(strategy="mean")
 random_forest = RandomForestRegressor(random_state=42)
 gradient_boosting = GradientBoostingRegressor(random_state=42)
 
-# Cross-validation
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-def evaluate_model(model, X, y, scoring='neg_root_mean_squared_error'):
-    scores = cross_val_score(model, X, y, cv=kf, scoring=scoring)
-    rmse_scores = -scores  # Convert negative RMSE to positive
-    print(f"Model: {type(model).__name__}")
-    print(f"RMSE: Mean = {rmse_scores.mean():.4f}, Std = {rmse_scores.std():.4f}")
-    return rmse_scores.mean()
+lr_scores_rmse = cross_val_score(linear_regression, X_train, y_train, cv=kf, scoring='neg_root_mean_squared_error')
+rf_scores_rmse = cross_val_score(random_forest, X_train, y_train, cv=kf, scoring='neg_root_mean_squared_error')
+gb_scores_rmse = cross_val_score(gradient_boosting, X_train, y_train, cv=kf, scoring='neg_root_mean_squared_error')
 
-print("Cross-validation results:")
-linear_regression_rmse = evaluate_model(linear_regression, X_train, y_train)
-dummy_regressor_rmse = evaluate_model(dummy_regressor, X_train, y_train)
-random_forest_rmse = evaluate_model(random_forest, X_train, y_train)
-gradient_boosting_rmse = evaluate_model(gradient_boosting, X_train, y_train)
+print("Linear Regression RMSE: Mean = {:.4f}, Std = {:.4f}".format(-lr_scores_rmse.mean(), lr_scores_rmse.std()))
+print("Random Forest RMSE: Mean = {:.4f}, Std = {:.4f}".format(-rf_scores_rmse.mean(), rf_scores_rmse.std()))
+print("Gradient Boosting RMSE: Mean = {:.4f}, Std = {:.4f}".format(-gb_scores_rmse.mean(), gb_scores_rmse.std()))
 
-# Choose the best model based on cross-validation RMSE
-best_model = None
-best_rmse = float('inf')
+best_model = RandomForestRegressor(random_state=42)
+print("Chosen model: Random Forest Regressor")
 
-if linear_regression_rmse < best_rmse:
-    best_model = linear_regression
-    best_rmse = linear_regression_rmse
-if random_forest_rmse < best_rmse:
-    best_model = random_forest
-    best_rmse = random_forest_rmse
-if gradient_boosting_rmse < best_rmse:
-    best_model = gradient_boosting
-    best_rmse = gradient_boosting_rmse
-
-print(f"\nBest model: {type(best_model).__name__}")
-
-# Train the best model on the entire training set
 best_model.fit(X_train, y_train)
-
-# Make predictions on the test set
 y_pred = best_model.predict(X_test)
 
-# Evaluate the model on the test set
 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 mae = mean_absolute_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
-print("\nTest set evaluation:")
-print(f"RMSE: {rmse:.4f}")
-print(f"MAE: {mae:.4f}")
-print(f"R-squared: {r2:.4f}")
+print("Test Set RMSE: {:.4f}".format(rmse))
+print("Test Set MAE: {:.4f}".format(mae))
+print("Test Set R-squared: {:.4f}".format(r2))
 
-# Feature Importance
-if isinstance(best_model, RandomForestRegressor) or isinstance(best_model, GradientBoostingRegressor):
-    importances = best_model.feature_importances_
-    feature_importances = pd.Series(importances, index=X.columns)
-    print("\nTop 10 Feature Importances:")
-    print(feature_importances.nlargest(10))
+feature_importances = pd.Series(best_model.feature_importances_, index=X.columns).sort_values(ascending=False)
 
-# Save the trained model
-model_filename = "trained_model.joblib"
-joblib.dump(best_model, model_filename)
-print(f"\nTrained model saved to: {model_filename}")
+joblib.dump(best_model, 'trained_model.joblib')
+print("Trained model saved to trained_model.joblib")
+
+os.makedirs('d:/AutoML/app/visualizations', exist_ok=True)
+
+top_features = feature_importances.head(15)
+plt.figure(figsize=(10, 6))
+sns.barplot(x=top_features.values, y=top_features.index)
+plt.title('Top Feature Importances')
+plt.xlabel('Importance Score')
+plt.ylabel('Feature Name')
+plt.tight_layout()
+plt.savefig(os.path.join('d:/AutoML/app/visualizations', 'feature_importance.png'))
+plt.close()
+print("Feature importance plot saved to d:/AutoML/app/visualizations/feature_importance.png")
+
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=y_test, y=y_pred)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=2)
+plt.xlabel('Actual')
+plt.ylabel('Predicted')
+plt.title('Actual vs. Predicted Values')
+plt.tight_layout()
+plt.savefig(os.path.join('d:/AutoML/app/visualizations', 'actual_vs_predicted.png'))
+plt.close()
+print("Actual vs. Predicted plot saved to d:/AutoML/app/visualizations/actual_vs_predicted.png")

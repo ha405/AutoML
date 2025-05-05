@@ -1,42 +1,45 @@
 *   **Overall Goal:** Analyze the initial data to understand its characteristics and prepare it for the likely ML task identified below. The aim is to produce a cleaned dataset (`processed_dataset.csv`) suitable for modeling.
 *   **1. Initial ML Task Assessment:**
     *   Based on the business problem and initial data, what is the most probable ML task? (e.g., Binary Classification, Regression). Briefly justify.
-        *   Regression is the most probable ML task. The business problem aims to predict car prices, which is a continuous numerical value.
+        *   **ML Task:** Regression. We're trying to predict `sales_volume`, a continuous numerical variable, to address the coffee sales shortage.
     *   Identify the most likely target variable column name. What is its apparent data type?
-        *   `price` is the most likely target variable. The data type is float64.
+        *   **Target Variable:** `sales_volume`. Its data type is `float64`.
 *   **2. Target Variable Investigation:**
     *   **Guidance for EDA:**
-        *   Confirm the presence and data type of the potential target variable (`price`). Are type conversions needed (e.g., object to numeric)?
-            *   Verify that the `price` column exists and is of type `float64`. If not, investigate and correct.
+        *   Confirm the presence and data type of the potential target variable (`sales_volume`). Are type conversions needed (e.g., object to numeric)?
+            *   Verify the `sales_volume` column exists and contains numerical data (`float64`). Ensure no unexpected object types are present due to data entry errors.
         *   Analyze its distribution. For classification, check for class imbalance. Quantify if significant imbalance exists, as this will impact modeling choices.
-            *   Plot a histogram and calculate descriptive statistics (mean, median, standard deviation, skewness) to understand the distribution of `price`. Check for outliers. Since this is a Regression task class imbalance is not applicable.
+            *   Plot a histogram of `sales_volume`. Note the range of values (min/max) and whether it is skewed. No need to check for class imbalance since it is a regression task.
 *   **3. Feature Exploration & Refinement:**
     *   **Guidance for EDA:**
         *   Identify columns that appear irrelevant (e.g., unique IDs, high cardinality free text) or redundant. Consider dropping them.
-            *   The initial dataset includes boolean features for each company name. Since "CompanyName" can be extracted from car name, there are high chances of multicollinearity, these columns need to be investigated.
-            *   The columns `CompanyName_toyouta` and `CompanyName_vokswagen` seem to be typos for `CompanyName_toyota` and `CompanyName_volkswagen` respectively. These need to be corrected and consolidated.
-            *   The `symboling` variable may need further scrutiny to determine its relevance.
+            *   `coffee_name_encoded` appears to be an encoded version of `coffee_name`. We need to investigate if the encoding is correct and helpful, or redundant.
         *   Examine date/time columns. Could components like month, day of week, or time differences be useful features? Consider extracting or converting them.
-            *   No date/time columns are present.
+            *   The columns `month`, `day_of_week`, `day_of_year`, and `hour_of_day` seem useful, but are already numerical. Check their ranges and distributions. Verify how they were created and if further transformation is needed.
         *   Investigate categorical features. Pay attention to those with potentially high cardinality. How might these be handled effectively (e.g., grouping, encoding strategies)?
-            *   Categorical features like `carbody`, `fueltype`, `aspiration`, `doornumber`, `drivewheel`, `enginelocation`, `enginetype`, `cylindernumber`, and `fuelsystem` need to be explored. For higher cardinality categorical features, consider techniques like frequency encoding or target encoding, balancing the risk of overfitting.
+            *   `coffee_name` is a categorical feature with 30 unique values. Investigate the sales volume per coffee type. Consider grouping less frequent coffee types into an "Other" category if they don't contribute significantly to sales.
         *   Assess relationships: Explore correlations between numerical features and between features and the potential target.
-            *   Calculate the correlation matrix for numerical features and visualize it using a heatmap. Also, calculate the correlation between each numerical feature and the target variable 'price'.
+            *   Calculate the correlation matrix (e.g., using `.corr()`). Visualize it using a heatmap. Identify any highly correlated features or strong correlations with `sales_volume`.
 *   **4. Data Quality & Cleaning:**
     *   **Guidance for EDA:**
         *   Thoroughly identify and profile missing values (NaNs, placeholders). Understand the extent and patterns of missingness.
-            *   The provided information indicates no missing values are present initially. However, verify this programmatically to ensure there aren't any hidden missing values represented by special characters or unusual values.
+            *   The initial data details indicate no missing values, but double-check to confirm. Look for unexpected placeholders.
         *   Based on the findings, consider appropriate imputation strategies for numerical (e.g., median, mean) and categorical (e.g., mode, 'Unknown' category) features. The EDA should implement a reasonable approach.
-            *   If any missing values are identified, apply suitable imputation techniques. Justify the choice of imputation method based on the distribution and nature of the missing data.
+            *   If missing values are found during verification, decide on an appropriate strategy. For numerical features, mean or median imputation is generally suitable. For `coffee_name`, creating an "Unknown" category is an option.
 *   **5. Feature Representation:**
     *   **Guidance for EDA:**
         *   Determine how categorical features should be represented numerically for modeling. Consider techniques like One-Hot Encoding (for lower cardinality) or alternatives for higher cardinality features identified earlier.
-            *   Apply One-Hot Encoding to categorical features with relatively low cardinality (e.g., `fueltype`, `aspiration`, `doornumber`, `enginelocation`). For features with higher cardinality like `enginetype` or `fuelsystem`, explore alternative encoding methods like frequency encoding or target encoding, and be mindful of potential overfitting.
+            *   Encode `coffee_name` using one-hot encoding or target encoding. One-hot encoding is suitable since the number of unique coffees is not exceedingly high (30). If one-hot encoding creates too many columns, target encoding could be an alternative.
         *   Consider if numerical features require scaling (e.g., using StandardScaler or MinMaxScaler), especially if distance-based algorithms or regularized models are likely candidates later. Recommend applying scaling as a standard good practice.
-            *   Apply StandardScaler or MinMaxScaler to numerical features to ensure they are on a similar scale. This can improve the performance of many machine learning algorithms, especially those sensitive to feature scaling.
+            *   Apply scaling (e.g., `StandardScaler` or `MinMaxScaler`) to numerical features to ensure they have a similar range. This is particularly important for algorithms sensitive to feature scaling.
 *   **6. Desired State of Output Dataset (`processed_dataset.csv`):**
     *   **Guidance for EDA:** The goal is to save a CSV named `processed_dataset.csv` where:
         *   Columns represent the final selected/engineered features and the target variable.
         *   All data is numerical (including encoded categoricals).
         *   Missing values have been addressed appropriately.
         *   The target variable is clean and in a suitable format for the ML task.
+*   **7. Visualization Prompts:**
+    *   Provide simple, non-technical plot prompts to illustrate key findings, such as:
+        *   "Show me a histogram of `sales_volume` to understand its distribution."
+        *   "Display a boxplot of `sales_volume` by `coffee_name` to compare sales across different coffee types."
+        *   "Create a line chart of average `sales_volume` by `hour_of_day` to identify peak sales times."
