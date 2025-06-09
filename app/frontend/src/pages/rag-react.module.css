@@ -1,0 +1,55 @@
+/* chat-react.module.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap');
+
+:local {
+  .chatContainer {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 20px;
+    height: 60vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(6px);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .chatBubble {
+    max-width: 70%;
+    padding: 14px 20px;
+    border-radius: 22px;
+    line-height: 1.5;
+    word-break: break-word;
+    font-size: 1rem;
+    animation: slideFade 0.35s ease-out;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  }
+
+  .userBubble {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #00d8ff, #3a7bd5);
+    color: #ffffff;
+    border-bottom-right-radius: 6px;
+  }
+
+  .botBubble {
+    align-self: flex-start;
+    background: #2a2d38;
+    color: #e8eaf0;
+    border-bottom-left-radius: 6px;
+  }
+
+  @keyframes slideFade {
+    0% {
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
