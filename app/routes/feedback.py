@@ -1,6 +1,6 @@
 from google import genai
 
-client = genai.Client(api_key="AIzaSyBoAFOxBSX1nxEF8lNuhJudPiHVTCRNK8Q")
+client = genai.Client(api_key="AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
 
 SYSTEM_PROMPT_INITIAL = """
 You are an AI assisting with business problem definition.

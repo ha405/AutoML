@@ -2,76 +2,132 @@ import pandas as pd
 import numpy as np
 import os
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import LabelEncoder, OrdinalEncoder, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+import matplotlib.pyplot as plt
 
-target_file_path = r'd:\AutoML\TestDatasets\Input.csv'
-processed_file_path = r'd:\AutoML\TestDatasets\Input_processed.csv'
+# 2. Data Loading
+try:
+    df = pd.read_csv("d:\\AutoML\\TestDatasets\\Input.csv")
+except FileNotFoundError:
+    print("Error: Input file not found.")
+    exit()
 
-df = pd.read_csv(target_file_path)
+# Rename 'money' column to 'sales_volume' since 'sales_volume' does not exist in the CSV file.
+df.rename(columns={'money': 'sales_volume'}, inplace=True)
 
-print(f"DataFrame Shape: {df.shape}")
-print(f"Columns: {df.columns.tolist()}")
-print("Data Types:\n", df.dtypes)
-print("Missing Values:\n", df.isnull().sum())
-print(f"Duplicate Rows: {df.duplicated().sum()}")
+# 3. Initial Diagnostics
+print("DataFrame Shape:", df.shape)
+print("\nColumn List with Data Types:")
+print(df.dtypes)
+print("\nMissing Values per Column:")
+print(df.isnull().sum())
+print("\nNumber of Duplicate Rows:", df.duplicated().sum())
 
-numeric_cols = df.select_dtypes(include='number').columns
-for col in numeric_cols:
-    if df[col].isnull().sum() > 0:
-        if df[col].isnull().sum() / len(df) < 0.3:
-            median_val = df[col].median()
-            df[col].fillna(median_val, inplace=True)
-        else:
-            print(f"Dropping column {col} due to excessive missing values.")
-            df.drop(col, axis=1, inplace=True)
-
-categorical_cols = df.select_dtypes(include=['object', 'category']).columns
-imputer = SimpleImputer(strategy='most_frequent')
-df[categorical_cols] = imputer.fit_transform(df[categorical_cols])
-
-print("Missing Values After Handling:\n", df.isnull().sum())
-
-df.drop_duplicates(inplace=True)
-print(f"Shape after dropping duplicates: {df.shape}")
-
-columns_to_drop = []
+# 4. Guided Preprocessing
+#   - Target Variable: sales_volume exists as float64. No conversion needed.
+#   - Feature Selection/Dropping: No columns to drop initially, based on the plan.
+#   - Missing Value Strategy: No missing values initially, but let's add a check as precaution
 for col in df.columns:
-    if 'id' in col.lower() and 'customer_id' not in col.lower():
-        columns_to_drop.append(col)
-    if 'num' in col.lower() and 'account_num' not in col.lower():
-        columns_to_drop.append(col)
-    if df[col].nunique() > 0.9 * len(df):
-        columns_to_drop.append(col)
-columns_to_drop = list(set(columns_to_drop))
+    if df[col].isnull().any():  # Corrected way to check for missing values
+        if df[col].dtype == 'float64' or df[col].dtype == 'int64':
+            imputer = SimpleImputer(strategy='mean')  # numerical columns, impute with mean
+        else:
+            imputer = SimpleImputer(strategy='most_frequent')  # categorical, impute with mode
+        df[col] = imputer.fit_transform(df[[col]])
 
-df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
-print(f"Dropped Columns: {columns_to_drop}")
+#   - Duplicate Removal:
+df.drop_duplicates(inplace=True)
 
-categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+# Extract features from the datetime column.
+df['datetime'] = pd.to_datetime(df['datetime'])
+df['month'] = df['datetime'].dt.month
+df['day_of_week'] = df['datetime'].dt.dayofweek
+df['day_of_year'] = df['datetime'].dt.dayofyear
+df['hour_of_day'] = df['datetime'].dt.hour
 
-for col in categorical_cols:
-    if df[col].nunique() == 2:
-        le = LabelEncoder()
-        df[col] = le.fit_transform(df[col])
-    elif df[col].nunique() <= 10:
-        try:
-            oe = OrdinalEncoder(categories=[['low', 'medium', 'high']]) # Assumption: Ordinality is low < medium < high
-            df[col] = oe.fit_transform(df[[col]])
-        except:
-            ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore', drop='first')
-            ohe_df = pd.DataFrame(ohe.fit_transform(df[[col]]), columns=ohe.get_feature_names_out([col]), index=df.index)
-            df = pd.concat([df, ohe_df], axis=1)
-            df.drop(col, axis=1, inplace=True)
-    else:
-        columns_to_drop.append(col)
+#   - Encoding: OneHotEncoding for coffee_name, high cardinality
+encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)  # Corrected for sparse output
+encoded_data = encoder.fit_transform(df[['coffee_name']])
+encoded_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out(['coffee_name'])) # Include feature names
+df = pd.concat([df.reset_index(drop=True), encoded_df.reset_index(drop=True)], axis=1) # Reset index to avoid index mismatch
+df.drop('coffee_name', axis=1, inplace=True) # Drop the original column
 
-df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
+# Label encode cash_type
+label_encoder = LabelEncoder()
+df['cash_type'] = label_encoder.fit_transform(df['cash_type'])
 
-print("Processed DataFrame Head:\n", df.head())
-print(f"Final Processed Shape: {df.shape}")
-print("Final Data Types:\n", df.dtypes)
-print("Summary Statistics (Processed Data):\n", df.describe(include='all'))
+# Drop 'date' and 'datetime' columns
+df.drop(['date', 'datetime'], axis=1, inplace=True)
 
-os.makedirs(os.path.dirname(processed_file_path), exist_ok=True)
-df.to_csv(processed_file_path, index=False)
-print(f"Processed data saved to: {processed_file_path}")
+#   - Scaling: StandardScaler for numerical features
+numerical_cols = df.select_dtypes(include=['number']).columns
+scaler = StandardScaler()
+df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
+
+# 5. Visualizations
+# Ensure the directory exists
+os.makedirs("d:/AutoML/app/visualizations", exist_ok=True)
+
+# Histogram of sales_volume
+plt.figure(figsize=(10, 6))
+plt.hist(df['sales_volume'], bins=20, color='skyblue', edgecolor='black')
+plt.xlabel('Sales Volume')
+plt.ylabel('Frequency')
+plt.title('Distribution of Sales Volume')
+plt.margins(0.1, 0.1) # Add margins
+plt.savefig("d:/AutoML/app/visualizations/sales_volume_distribution.png")
+plt.close()
+
+# Boxplot of sales_volume by cash_type
+plt.figure(figsize=(10, 6))
+df.boxplot(column='sales_volume', by='cash_type')
+plt.xlabel('Cash Type')
+plt.ylabel('Sales Volume')
+plt.title('Sales Volume by Cash Type')
+plt.suptitle('') # Remove the default title
+plt.margins(0.1, 0.1) # Add margins
+plt.savefig("d:/AutoML/app/visualizations/sales_volume_by_cash_type.png")
+plt.close()
+
+# Scatter plot of sales_volume vs. hour_of_day
+plt.figure(figsize=(10, 6))
+plt.scatter(df['hour_of_day'], df['sales_volume'], color='lightcoral')
+plt.xlabel('Hour of Day')
+plt.ylabel('Sales Volume')
+plt.title('Sales Volume vs. Hour of Day')
+plt.margins(0.1, 0.1) # Add margins
+plt.savefig("d:/AutoML/app/visualizations/sales_volume_vs_hour_of_day.png")
+plt.close()
+
+# Plotting the correlation matrix
+correlation_matrix = df.corr()
+
+# Ensure enough space for labels
+plt.figure(figsize=(12, 10))
+plt.imshow(correlation_matrix, cmap='coolwarm', interpolation='nearest')
+plt.colorbar(shrink=0.8)
+plt.xticks(range(len(correlation_matrix.columns)), correlation_matrix.columns, rotation=0)
+plt.yticks(range(len(correlation_matrix.columns)), correlation_matrix.columns)
+plt.title('Correlation Matrix of Features')
+plt.margins(0.1, 0.1) # Add margins
+plt.tight_layout()
+plt.savefig("d:/AutoML/app/visualizations/correlation_matrix.png")
+plt.close()
+
+# 6. Final Diagnostics
+print("\nTransformed DataFrame Head:")
+print(df.head())
+print("\nTransformed DataFrame Shape:", df.shape)
+print("\nTransformed DataFrame Data Types:")
+print(df.dtypes)
+print("\nTransformed DataFrame Summary Statistics:")
+print(df.describe())
+
+# Verify no unexpected object-type columns remain
+object_cols = df.select_dtypes(include=['object']).columns
+print(f"\nObject type columns remaining: {object_cols}")
+
+# 7. Save Output
+os.makedirs(os.path.dirname("d:\\AutoML\\TestDatasets\\Input_processed.csv"), exist_ok=True)
+df.to_csv("d:\\AutoML\\TestDatasets\\Input_processed.csv", index=False)
+print("\nProcessed DataFrame saved to d:\\AutoML\\TestDatasets\\Input_processed.csv")

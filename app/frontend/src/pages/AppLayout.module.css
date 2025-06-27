@@ -1,0 +1,35 @@
+/* AppLayout.module.css */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap');
+
+:root {
+  --split-border: rgba(255,255,255,0.1);
+  --sidebar-bg: #141827;
+  --main-bg: #0f0f1a;
+  --font-main: 'Space Grotesk', sans-serif;
+}
+
+.appWrapper {
+  display: flex;
+  height: 100vh;
+  font-family: var(--font-main);
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 360px;
+  min-width: 280px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--split-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.mainContent {
+  flex: 1;
+  background: var(--main-bg);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* let the Dashboard’s own padding & styling take over */
+}

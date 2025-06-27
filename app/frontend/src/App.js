@@ -1,22 +1,32 @@
+// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';              
-import Conversation from './pages/Conversation'; 
+
+import Home from './pages/Home';
+import Conversation from './pages/Conversation';
+import Chat from './pages/chat';
+import Dashboard from './pages/dashboard';
+import AppLayout from './pages/AppLayout';
 
 function App() {
   return (
     <Router>
-      {/* You could add a common Header/Navbar here if needed */}
       <Routes>
-        {/* Route for the Home page */}
+        {/* Landing Page */}
         <Route path="/" element={<Home />} />
 
-        {/* Route for the Conversation page */}
+        {/* Existing “analysis” conversation flow */}
         <Route path="/conversation" element={<Conversation />} />
 
-        {/* Add other routes here if you expand the app */}
++       {/* New chat stage, separate from Conversation */}
++       <Route path="/chat" element={<Chat />} />
+
+        {/* Dashboard */}
+        <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Combined view */}
+        <Route path="/app" element={<AppLayout />} />
       </Routes>
-      {/* You could add a common Footer here if needed */}
     </Router>
   );
 }

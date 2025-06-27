@@ -1,0 +1,128 @@
+/* dashboard.module.css */
+
+/*--------------------------------------------------------------
+   IMPORTS & VARIABLES (Local Scope)
+--------------------------------------------------------------*/
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap');
+
+:root {
+  --dbkg-1: #0f0f1a;
+  --dbkg-2: #141827;
+  --daccent: #00d8ff;
+  --daccent-end: #3a7bd5;
+  --dtext-primary: #e8eaf0;
+  --dtext-secondary: #a0a8b4;
+  --dcard-bg: #1a1c29;
+  --dcard-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --dborder: #2a2d38;
+  --dradius: 12px;
+  --dfont: 'Space Grotesk', sans-serif;
+}
+
+/*--------------------------------------------------------------
+   CONTAINER & GRID
+--------------------------------------------------------------*/
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--dfont);
+  color: var(--dtext-primary);
+  background: linear-gradient(110deg, var(--dbkg-1), var(--dbkg-2));
+  min-height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1200px;
+  margin-top: 2rem;
+}
+
+/*--------------------------------------------------------------
+   CARD
+--------------------------------------------------------------*/
+.card {
+  background-color: var(--dcard-bg);
+  border: 1px solid var(--dborder);
+  border-radius: var(--dradius);
+  box-shadow: var(--dcard-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 216, 255, 0.3);
+}
+
+/*--------------------------------------------------------------
+   IMAGE
+--------------------------------------------------------------*/
+.image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-bottom: 1px solid var(--dborder);
+}
+
+/*--------------------------------------------------------------
+   EXPLANATION TEXT
+--------------------------------------------------------------*/
+.explanation {
+  padding: 1rem;
+  font-size: 0.95rem;
+  color: var(--dtext-secondary);
+  line-height: 1.5;
+}
+
+/*--------------------------------------------------------------
+   LOADING & ERROR STATES
+--------------------------------------------------------------*/
+.loading,
+.error {
+  font-size: 1rem;
+  margin-top: 1.5rem;
+  color: var(--dtext-secondary);
+  text-align: center;
+}
+
+.error {
+  color: #ff8080;
+}
+.nextWrapper {
+  margin-top: 3rem;
+  display: flex;
+  justify-content: center;
+}
+
+.nextBtn {
+  background: linear-gradient(135deg, var(--daccent), var(--daccent-end));
+  color: var(--dbkg-1);
+  border: none;
+  border-radius: var(--dradius);
+  padding: 0.9rem 2rem;
+  font-family: var(--dfont);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 216, 255, 0.25);
+}
+
+.nextBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 216, 255, 0.4);
+  background: linear-gradient(135deg, var(--daccent-end), var(--daccent));
+}
+
+.nextBtn:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(0, 216, 255, 0.3);
+}
