@@ -49,9 +49,28 @@ export default function Home() {
     return () => { recognitionRef.current?.abort(); };
   }, []);
 
+  const MAX_FILE_SIZE_MB = 50;
+
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) { setFile(e.target.files[0]); setMicError(''); }
-    else { setFile(null); }
+    if (e.target.files && e.target.files[0]) {
+      const selected = e.target.files[0];
+      if (!selected.name.toLowerCase().endsWith('.csv')) {
+        setMicError('Only CSV files are allowed.');
+        setFile(null);
+        e.target.value = '';
+        return;
+      }
+      if (selected.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        setMicError(`File too large (max ${MAX_FILE_SIZE_MB}MB).`);
+        setFile(null);
+        e.target.value = '';
+        return;
+      }
+      setFile(selected);
+      setMicError('');
+    } else {
+      setFile(null);
+    }
   };
 
   const handleSubmit = async (e) => {

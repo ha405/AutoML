@@ -18,8 +18,8 @@ function App() {
         {/* Existing “analysis” conversation flow */}
         <Route path="/conversation" element={<Conversation />} />
 
-+       {/* New chat stage, separate from Conversation */}
-+       <Route path="/chat" element={<Chat />} />
+        {/* New chat stage, separate from Conversation */}
+        <Route path="/chat" element={<Chat />} />
 
         {/* Dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />

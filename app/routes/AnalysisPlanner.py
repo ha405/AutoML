@@ -1,58 +1,16 @@
 import os
 import sys
-import time
 import re
-import google.generativeai as genai
-from constants import AUTOML_ROOT_DIR, SCRIPTS_PATH_REL
+from constants import PLANS_DIR
+from routes.gemini_client import get_model, is_configured, MODEL_NAME
 
-# Try to get API key from environment variable first
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+EDA_GUIDANCE_TXT_FILE_PATH = os.path.join(PLANS_DIR, "eda_guidance_plan.txt")
+ML_PLAN_TXT_FILE_PATH = os.path.join(PLANS_DIR, "ml_plan.txt") 
 
-# If not found in environment, use the hardcoded key
-if not GEMINI_API_KEY:
-    GEMINI_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"
-
-MODEL_NAME = "gemini-2.0-flash"
-
-OUTPUT_DIR_BASE = os.path.join(AUTOML_ROOT_DIR, SCRIPTS_PATH_REL)
-os.makedirs(OUTPUT_DIR_BASE, exist_ok=True)
-
-EDA_GUIDANCE_TXT_FILE_PATH = os.path.join(OUTPUT_DIR_BASE, "eda_guidance_plan.txt")
-ML_PLAN_TXT_FILE_PATH = os.path.join(OUTPUT_DIR_BASE, "ml_plan.txt") 
-
-client = None
-client_configured = False
-
-def configure_client():
-    global client, client_configured
-    try:
-        if not GEMINI_API_KEY:
-            raise ValueError("No API key available from environment or configuration")
-        
-        genai.configure(api_key=GEMINI_API_KEY)
-        client = genai.GenerativeModel(MODEL_NAME)
-        
-        # Test the configuration with a simple request
-        test_response = client.generate_content("Test")
-        if not test_response or not test_response.text:
-            raise Exception("Failed to get valid response from API")
-            
-        client_configured = True
-        print(f"Google AI client successfully configured for Guided Planner using model {MODEL_NAME}.")
-        return True
-    except Exception as e:
-        print(
-            f"⚠ Error configuring Google AI client: {str(e)}\n"
-            "Ensure either:\n"
-            "1. The GOOGLE_API_KEY environment variable is set correctly, or\n"
-            "2. A valid API key is provided in the configuration",
-            file=sys.stderr
-        )
-        client_configured = False
-        return False
-
-# Configure client on module import
-configure_client()
+if is_configured():
+    print(f"AnalysisPlanner ready (model: {MODEL_NAME}).")
+else:
+    print("WARNING: Gemini client not configured for AnalysisPlanner.", file=sys.stderr)
 
 SYSTEM_TEMPLATE_GUIDED_PLANNER = r"""
 You are an expert Senior Data Scientist creating a **Unified Analysis & ML Plan**.
@@ -138,11 +96,11 @@ Output **ONLY** the Markdown formatted plan below, starting *exactly* with "### 
 """
 
 def _call_model(prompt: str) -> str:
-    if not client_configured or not client:
+    if not is_configured() or not get_model():
         return "# Error: Google AI client not configured."
 
     print(f"Sending request to {MODEL_NAME} (GuidedPlanner)...")
-    response = client.generate_content(contents={'parts': [{'text': prompt}]})
+    response = get_model().generate_content(contents={'parts': [{'text': prompt}]})
     print("Response received (GuidedPlanner).")
 
     if response.parts:

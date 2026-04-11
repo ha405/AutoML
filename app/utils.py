@@ -55,15 +55,6 @@ def filepreprocess(file_input):
 
           return {"error": f"Uploaded file could not be processed : " + str(e)}
 
-def load_code_from_file(file_path):
-    """Loads Python code from a file."""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            code = f.read()
-        return code
-    except Exception as e:
-        print(f"Error reading code file: {e}")
-        return None
 
 def load_logs_from_file(file_path):
     """Loads logs from a text file, attempting different encodings."""

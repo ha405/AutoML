@@ -1,25 +1,8 @@
-import google.generativeai as genai
 import os
 import sys
 
-# --- Configuration for Google AI Studio ---
-# WARNING: Hardcoding API keys is generally insecure. Consider environment variables.
-GOOGLE_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"
-MODEL_NAME = "gemini-2.0-flash"  # Using the specified Gemini model
-
-# Configure the Gemini client globally
-client_configured = False
-model = None
-try:
-    if not GOOGLE_API_KEY or GOOGLE_API_KEY == "YOUR_GOOGLE_AI_API_KEY":
-        print("⚠️ Warning [VizPlanner]: Google API Key not set or is placeholder.", file=sys.stderr)
-    else:
-        genai.configure(api_key=GOOGLE_API_KEY)
-        model = genai.GenerativeModel(MODEL_NAME)
-        print(f"✅ Google AI client configured for Visualization Planner using model {MODEL_NAME}.")
-        client_configured = True
-except Exception as e:
-    print(f"❌ Error configuring Google AI client [VizPlanner]: {e}", file=sys.stderr)
+from routes.gemini_client import get_model, is_configured, MODEL_NAME
+import google.generativeai as genai
 
 SYSTEM_INSTRUCTION_VISUALIZATION_PLANNER_TEMPLATE = r"""
 You are a data visualization consultant creating a friendly, easy-to-understand plan for a small business manager with no technical background.
@@ -88,7 +71,7 @@ def generate_visualization_plan(
     """
     Generates a jargon-free, SME-friendly visualization plan using Google AI (Gemini).
     """
-    if not client_configured or model is None:
+    if not is_configured() or get_model() is None:
         return "# Error: Google AI client not configured for Visualization Planner."
 
     processed_dataset_prompt_path = processed_dataset_path_str.replace("\\", "/")
@@ -114,7 +97,7 @@ def generate_visualization_plan(
     print(f"Sending request to {MODEL_NAME} [VizPlanner]...")
 
     try:
-        response = model.generate_content(
+        response = get_model().generate_content(
             contents=prompt,
             generation_config=generation_config
         )

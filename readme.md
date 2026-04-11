@@ -1,79 +1,67 @@
 # DataWise AI
-## Overview
-DataWise AI is a full-stack data analysis and machine learning platform designed to automate complex analytical tasks and generate actionable visualizations. It empowers SMEs to make data-informed decisions through an interactive dashboard and robust backend ML pipeline.
 
-## Setup Instructions
+DataWise AI is an automated machine learning and data analysis platform that converts CSV data into insights, models, and visualizations.
 
-### Files setup
-Download and copy all the files from the following link into the folder app/routes/filtered  
-https://drive.google.com/drive/folders/1oXV7d5Mzohfndjb8zxRTN9IV1DhvpwZk?usp=sharing
+## Quick Start
 
-### Backend Setup
-Ensure Python 3.9+ is installed.  
-Run in Powershell or CMD: set GOOGLE_API_KEY=AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ
-Create and activate a virtual environment (recommended):  
-python -m venv venv  
-source venv/bin/activate (On Windows: venv\Scripts\activate)
+The platform is fully containerized using Docker.
 
-Install required Python dependencies:  
-pip install -r requirements.txt
+### 1. Configuration
+Create a `.env` file in the root directory:
+```env
+GOOGLE_API_KEY=your_gemini_api_key_here
+```
 
-Run the backend server:  
-python main.py
+### 2. Execution
+Launch the ecosystem using Docker Compose:
+```bash
+docker-compose up -d --build
+```
+Access the dashboard at http://localhost:3000.
 
-### Frontend Setup
-Navigate to the frontend directory: 
-cd frontend
+### Running Backend Only
+If you prefer to run the backend without Docker:
+1. Ensure Python 3.12+ is installed.
+2. Install dependencies: `pip install -r requirements.txt`
+3. Set your environment variable: `GOOGLE_API_KEY=your_key`
+4. Run: `python app/main.py`
 
-Install Node.js dependencies:  
-npm install
+## Datasets
 
-Start the frontend development server:  
-npm start
+The platform accepts any standard CSV file up to 50MB.
 
-Access the dashboard via http://localhost:3000
+### Using Sample Data
+Several pre-verified datasets are available in the `TestDatasets/` directory for immediate testing:
+- Car price prediction (Regression)
+- Amazon sales trends (Time-series/Sales)
+- Supermarket analytics (Retail)
+- Credit card churn (Classification)
 
-## Project Structure
-frontend/ — React-based frontend for dashboard and visualization.
+### Custom Data
+Upload your own CSV directly through the dashboard interface once the system is running.
 
-Backend root directory contains core Python modules and scripts:
+## Project Architecture
 
-main.py — backend server entry point.
+- **Frontend**: React-based dashboard served via Nginx.
+- **Backend**: Flask API orchestrating ML and Data Analysis logic.
+- **Output**: All runtime artifacts (scripts, logs, and plots) are stored in the `output/` directory.
 
-config.py, constants.py — configuration files.
+## Verification
 
-utils.py — utility functions (Analysis Planner, feedback loops, ML, Data Analysis, Visualizations).
+To verify the pipeline independently of the UI, run the automated test suite. It will automatically upload the sample car price dataset to the backend and execute the full ML flow:
 
-gradient_boosting_model.joblib, trained_model.joblib — saved ML models.
+```bash
+# Basic test against Docker (localhost:3000) or local (localhost:5000)
+python test_pipeline.py --host http://localhost:5000
+```
 
-Supporting directories:
+### Manual API Usage
+To pass a dataset manually to the backend API, send a `POST` request to `/api/home` with:
+- **Header**: `multipart/form-data`
+- **Body**: A file field named `file-upload` containing your CSV.
+- **Body**: A text field named `queryInput` describing your analysis goal.
 
-routes/, scripts/, visualizations/ — backend API routes, helper scripts, and visualization generation.
-
-static/, templates/ — static assets and HTML templates.
-
-tests/ — test files.
-
-Additional components:
-
-Models/, Voice/, app/, TestDatasets/ — ML models, voice-related modules, app components, and datasets.
-
-experiments/ — experiment tracking.
-
-.flask_session/ — Flask session data.
-
-## Notes
-The system uses accessible APIs like Gemini for ML and data processing.
-
-Modular design emphasizes Analysis Planning, Machine Learning, and Visualization.
-
-Supports expansion for new ML tasks, data types, and interactive dashboard features.
-
-Run both backend and frontend servers simultaneously to use the platform fully.
-
-## Example Prompts for RAG Pipeline
-Prompt 1: "Outline the main steps of honey farming."
-Prompt 2: "How much space do I need to open a laundry business?"
-Prompt 3: "What SOPs do I need to follow to open a restaurant in Lahore, Pakistan?"
-Prompt 4: "Summarize what steps I would need to follow to open a library in Lahore."
-
+## Tech Stack
+- **Backend**: Python 3.12 (Flask, Pandas, Scikit-Learn).
+- **Frontend**: React 18 (MUI).
+- **AI**: Google Gemini (2.0 Flash).

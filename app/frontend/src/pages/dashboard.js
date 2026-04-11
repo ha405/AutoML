@@ -27,15 +27,52 @@ export default function Dashboard() {
   }, []);
 
   if (status === 'loading') {
-    return <p className={styles.loading}>Loading visualizations…</p>;
+    return (
+      <div className={styles.container}>
+        <div className={styles.grid}>
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className={styles.card} style={{ opacity: 0.5 }}>
+              <div
+                style={{
+                  width: '100%',
+                  height: '200px',
+                  background: 'linear-gradient(90deg, #2a2a3e 25%, #3a3a50 50%, #2a2a3e 75%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 1.5s infinite',
+                  borderRadius: '8px',
+                }}
+              />
+              <p className={styles.explanation} style={{ opacity: 0.3 }}>
+                Loading visualization...
+              </p>
+            </div>
+          ))}
+        </div>
+        <style>{`
+          @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        `}</style>
+      </div>
+    );
   }
+
   if (status === 'error') {
-    return <p className={styles.error}>Unable to load plot explanations.</p>;
+    return (
+      <div className={styles.container}>
+        <p className={styles.error}>Unable to load plot explanations.</p>
+      </div>
+    );
   }
 
   const entries = Object.entries(explanations);
   if (entries.length === 0) {
-    return <p className={styles.loading}>No explanations found.</p>;
+    return (
+      <div className={styles.container}>
+        <p className={styles.loading}>No visualizations found.</p>
+      </div>
+    );
   }
 
   return (
@@ -47,6 +84,7 @@ export default function Dashboard() {
               src={`${vizPath}${filename}`}
               alt={filename}
               className={styles.image}
+              loading="lazy"
             />
             <p className={styles.explanation}>{explanation}</p>
           </div>

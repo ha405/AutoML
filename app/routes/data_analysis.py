@@ -1,18 +1,11 @@
 import os
 import sys
-import google.generativeai as genai
 from constants import PROCESSED_DATASET_PATH
+from routes.gemini_client import get_model, is_configured
 
-# --- Configuration ---
-try:
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        raise ValueError("GOOGLE_API_KEY environment variable not set")
-    genai.configure(api_key="AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
-    client = genai.GenerativeModel("gemini-2.0-flash")
-except Exception as e:
-    print(f"[ERROR] Failed to configure Gemini API: {str(e)}")
-    sys.exit(1)
+if not is_configured():
+    print("[ERROR] Gemini client not configured. Set GOOGLE_API_KEY.", file=sys.stderr)
+
 
 # --- Prompt Templates ---
 SYSTEM_INSTRUCTION_EDA = r"""
@@ -111,7 +104,7 @@ def generate_response(prompt_text):
     """
     try:
         print("Sending request to Gemini...")
-        response = client.generate_content(contents=prompt_text) 
+        response = get_model().generate_content(contents=prompt_text) 
         if response.parts:
              text = response.parts[0].text
         else:
