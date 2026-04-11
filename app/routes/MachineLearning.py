@@ -1,28 +1,15 @@
 import google.generativeai as genai
 import os
 import sys
-import re # Keep re import
-import time # Keep time import
+import re
+import time
 
-# --- Constants ---
-# Assuming PROCESSED_DATASET_PATH is defined elsewhere if needed by the generated code itself
-# from constants import PROCESSED_DATASET_PATH
+from routes.gemini_client import get_model, is_configured, MODEL_NAME
 
-# --- Configuration ---
-# GOOGLE_API_KEY should be set as an environment variable for security
-# Example placeholder provided for structure, DO NOT HARDCODE REAL KEYS
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-MODEL_NAME = "gemini-2.0-flash"
-
-# Initialize client with proper error handling
-model = None
-try:
-    if not GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY environment variable not set")
-    genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel(MODEL_NAME)
-except Exception as e:
-    print(f"Error configuring Gemini API client: {e}", file=sys.stderr)
+# Initialize - just check configuration
+model = get_model()
+if not model:
+    print("WARNING: Gemini client not configured for ML module.", file=sys.stderr)
 
 
 # --- Prompt Templates ---

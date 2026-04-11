@@ -1,6 +1,4 @@
-from google import genai
-
-client = genai.Client(api_key="AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
+from routes.gemini_client import get_model, is_configured
 
 SYSTEM_PROMPT_INITIAL = """
 You are an AI assisting with business problem definition.
@@ -56,9 +54,10 @@ Your response should ONLY include the final business problem statement and nothi
 """
 
 def generate_response(messages):
-    response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=messages
-    )
+    model = get_model()
+    if not model:
+        return "Error: Gemini client not configured. Set GOOGLE_API_KEY environment variable."
+    response = model.generate_content(contents=messages)
     return response.text.strip()
 
 def process_feedback(conversation):

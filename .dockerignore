@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+*.joblib
+
+# Node / Frontend
+app/frontend/node_modules/
+app/frontend/build/
+app/frontend/npm-debug.log*
+
+# Application Artifacts
+output/
+logs/
+experiments/
+
+# IDEs
+.vscode/
+.idea/

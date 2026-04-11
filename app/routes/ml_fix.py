@@ -4,47 +4,7 @@ import re
 import time
 import traceback
 
-try:
-    import google.generativeai as genai
-    print(f"INFO ({__file__}): Successfully imported google.generativeai.", file=sys.stderr)
-except ImportError:
-    print(f"WARNING ({__file__}): google.generativeai not installed. ML code fixing disabled.", file=sys.stderr)
-    genai = None
-
-genai_client = None
-if genai:
-    try:
-        GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY")
-        if not GEMINI_API_KEY:
-            GEMINI_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"
-            print(f"WARNING ({__file__}): GOOGLE_API_KEY not set in environment variables. Using placeholder key.", file=sys.stderr)
-            if GEMINI_API_KEY == "YOUR_API_KEY_HERE":
-                 print(f"ERROR ({__file__}): Placeholder API Key detected. Gemini client will likely fail. Please set GOOGLE_API_KEY environment variable.", file=sys.stderr)
-
-        genai.configure(api_key=GEMINI_API_KEY)
-        MODEL_NAME = "gemini-2.0-flash"
-        safety_settings = [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        ]
-        generation_config = genai.types.GenerationConfig(
-            max_output_tokens=8192
-        )
-        genai_client = genai.GenerativeModel(
-            MODEL_NAME,
-            safety_settings=safety_settings,
-            generation_config=generation_config
-            )
-        print(f"INFO ({__file__}): Gemini client configured for ML fix using model {MODEL_NAME}.", file=sys.stderr)
-    except Exception as e:
-        print(f"ERROR ({__file__}): Error setting up Gemini client for ML fix: {e}", file=sys.stderr)
-        print(traceback.format_exc(), file=sys.stderr)
-        genai_client = None
-else:
-    print(f"INFO ({__file__}): google.generativeai library not available. ML Fix Client not configured.", file=sys.stderr)
-    genai_client = None
+from routes.gemini_client import get_model, is_configured
 
 def clean_llm_code_output(raw_code: str) -> str:
     if not raw_code:
@@ -69,9 +29,8 @@ def attempt_ml_code_fix(
     ml_plan: str,
     eda_output_logs: str
 ) -> str | None:
-    global genai_client
-    if not genai_client:
-        print(f"ERROR ({__file__}): Gemini client not available. Cannot fix ML code.", file=sys.stderr)
+    if not is_configured():
+        print(f"ERROR ({__file__}): Gemini client not configured. Cannot fix ML code.", file=sys.stderr)
         return None
 
     if not broken_ml_code or not broken_ml_code.strip():
@@ -141,7 +100,7 @@ Your task is to analyze the provided failing ML script, the exact error message,
         current_attempt += 1
         try:
             print(f"INFO ({__file__}): Sending request to Gemini for ML code fix (Attempt {current_attempt}/{retry_attempts})...", file=sys.stderr)
-            response = genai_client.generate_content(contents=prompt)
+            response = get_model().generate_content(contents=prompt)
 
             if response and getattr(response, 'text', None):
                 raw_code = response.text

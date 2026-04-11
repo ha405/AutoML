@@ -246,12 +246,10 @@ export default function Conversation() {
       setPipelineStatus('error');
       setPipelineMessage(`Failed to get response: ${err.message || 'API error'}`);
     } finally {
-      // Re-evaluate isLoading based on whether the conversation phase is complete
-       const problemIsNowFinal = !!(finalProblemText || state?.final_problem); // Check if problem is determined now
-       if (!problemIsNowFinal && pipelineStatus !== 'error') {
-           setIsLoading(false);
-       }
-       // If problem became final, isLoading will be handled by the pipeline effect
+      // Always stop the loading spinner here.
+      // If the conversation phase completes (isFinal becomes true),
+      // the pipeline useEffect will re-set isLoading when it kicks off.
+      setIsLoading(false);
     }
   };
 

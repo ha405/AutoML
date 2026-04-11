@@ -1,27 +1,14 @@
-import google.generativeai as genai
 import os
 import sys
-import re        # Keep re import
-import time      # Keep time import
-import base64
+import re
+import glob
 import json
+import base64
+import traceback
+
+import google.generativeai as genai
+from routes.gemini_client import get_model, is_configured, MODEL_NAME
 from PIL import Image
-
-# --- Configuration ---
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
-MODEL_NAME     = "gemini-2.0-flash"
-
-# Configure the GenAI client
-try:
-    if not GOOGLE_API_KEY or GOOGLE_API_KEY == "YOUR_GOOGLE_AI_API_KEY":
-        print("⚠ Warning: Google API Key not set or is placeholder.", file=sys.stderr)
-    else:
-        genai.configure(api_key=GOOGLE_API_KEY)
-        model = genai.GenerativeModel(MODEL_NAME)
-        print(f"Google AI client configured for VLM using model {MODEL_NAME}.")
-except Exception as e:
-    print(f"❌ Error configuring Google AI client: {e}", file=sys.stderr)
-    sys.exit(1)
 
 def _make_inline_part(path: str, mime: str = "image/png") -> dict:
     """
@@ -72,7 +59,7 @@ def generate_plot_explanations(business_problem: str, viz_directory: str, max_im
         path = os.path.join(viz_directory, filename)
         try:
             part = _make_inline_part(path, mime="image/png")
-            response = model.generate_content([part, prompt])
+            response = get_model().generate_content([part, prompt])
             raw_text = response.text.strip()
 
             try:

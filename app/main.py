@@ -6,6 +6,10 @@ import json
 
 from flask import Flask, request, session, jsonify, send_from_directory
 from flask_session import Session
+try:
+    from flask_cors import CORS
+except ImportError:
+    CORS = None
 from routes import feedback, MachineLearning, data_analysis, visualization_planner, visualization_generator, eda_fix, ml_fix, AnalysisPlanner, vision_model
 from routes.chatbp import chat_bp
 from utils import filepreprocess, load_code_from_file, load_logs_from_file, _serialize
@@ -22,16 +26,29 @@ from constants import (
     VISUALIZATION_CODE_FILE_PATH,
     VISUALIZATION_OUTPUT_DIR,
     FRONTEND_JSON_PATH,
-    MAX_ATTEMPTS,MAX_FIX_ATTEMPTS,MAX_ML_EXEC_ATTEMPTS,MAX_ML_FIX_ATTEMPTS
+    SESSIONS_DIR,
+    MAX_ATTEMPTS, MAX_FIX_ATTEMPTS, MAX_ML_EXEC_ATTEMPTS, MAX_ML_FIX_ATTEMPTS
 )
 
 app = Flask(__name__, static_folder="frontend/build", static_url_path="")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super_secret_key_98765")
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB upload limit
+
+# Enable CORS in development
+if CORS:
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+
 
 app.config["SESSION_TYPE"] = "filesystem"
-app.config["SESSION_FILE_DIR"] = os.path.join(os.getcwd(), ".flask_session")
+app.config["SESSION_FILE_DIR"] = SESSIONS_DIR
 app.config["SESSION_PERMANENT"] = False
 Session(app)
+
+
+# Error handler for file-too-large
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify(error="File too large. Maximum upload size is 50MB."), 413
 
 
 @app.route("/api/home", methods=["POST"])
@@ -43,23 +60,22 @@ def api_home():
     try:
         if upload:
             if not upload.filename.lower().endswith('.csv'):
-                 # app.logger.warning(f"Invalid file type uploaded: {upload.filename}") # Removed logging
                  return jsonify(error="Only CSV files are allowed."), 400
             os.makedirs(os.path.dirname(DATASET_PATH), exist_ok=True)
             upload.save(DATASET_PATH)
             filedetails = filepreprocess(DATASET_PATH)
             if filedetails.get("error"):
-                # app.logger.error(f"File preprocessing error: {filedetails['error']}") # Removed logging
                 return jsonify(error=filedetails["error"]), 400
         elif prompt:
             filedetails = {"info": "Proceeding with text prompt only."}
             if os.path.exists(DATASET_PATH):
                 try: os.remove(DATASET_PATH)
-                except OSError as e: pass # app.logger.warning(f"Could not remove previous dataset file {DATASET_PATH}: {e}") # Removed logging
+                except OSError: pass
         else:
             return jsonify(error="Provide a prompt or a CSV file."), 400
     except Exception as e:
-        # app.logger.error(f"Error during file upload/processing: {e}", exc_info=True) # Removed logging
+        import traceback
+        traceback.print_exc()
         return jsonify(error="Failed to process input.", details=str(e)), 500
 
     serialized_filedetails = _serialize(filedetails)
@@ -76,9 +92,10 @@ def api_home():
         session["conversation"] = initial_conversation_state
         session["final_problem"] = None
     except Exception as e:
+         app.logger.error(f"Error generating initial AI response: {e}", exc_info=True)
          session["conversation"] = [
              f"User: {prompt or 'Analyze uploaded file.'}",
-             "System: Error generating initial AI response."
+             f"System: Error generating initial AI response. Details: {e}"
          ]
          session["final_problem"] = None
          return jsonify({
@@ -135,8 +152,7 @@ def api_conversation():
             }), 500
 
     elif request.method == "GET":
-        # app.logger.debug(f"GET /api/conversation retrieving state: Conversation length {len(conversation)}, Final problem set: {bool(final_problem)}") # Removed logging
-        pass
+        pass  # State is returned below
 
     return jsonify({
         "conversation": session.get("conversation", []),
@@ -330,9 +346,6 @@ def api_ml():
         except Exception as e:
             app.logger.error(f"Failed to read ML plan file: {e}", exc_info=True)
             return jsonify(error="Failed to read ML plan file.", details=str(e)), 500
-        except Exception as e:
-            app.logger.error(f"Failed to read ML plan file: {e}", exc_info=True)
-            return jsonify(error="Failed to read ML plan file.", details=str(e)), 500
     else:
         app.logger.error(f"ML execution request failed: ML plan file not found at {ml_plan_full_path}")
         return jsonify(error="No ML plan available. Ensure planning step was successful."), 404
@@ -504,8 +517,14 @@ def api_vlm():
         return jsonify(error="Failed to generate plot explanations."), 500
     return jsonify(status="success"), 200
 
+
 app.register_blueprint(chat_bp, url_prefix="/api")
 
+
+# Serve generated visualizations from the output directory
+@app.route("/visualizations/<path:filename>")
+def serve_visualization(filename):
+    return send_from_directory(VISUALIZATION_OUTPUT_DIR, filename)
 
 
 @app.route("/", defaults={"path": ""})

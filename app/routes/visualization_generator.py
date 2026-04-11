@@ -1,26 +1,10 @@
 # routes/visualization_generator.py
 
-import google.generativeai as genai
 import os
 import sys
 
-# ... (Keep API Key, Model Name, Client Configuration as before) ...
-GOOGLE_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"
-MODEL_NAME = "gemini-2.0-flash" # Or "gemini-pro". Flash is faster, Pro might be slightly better at complex code.
-
-# Configure the Gemini client globally
-client_configured = False
-model = None
-try:
-    if not GOOGLE_API_KEY or GOOGLE_API_KEY == "YOUR_GOOGLE_AI_API_KEY":
-        print("⚠ Warning [VizGen]: Google API Key not set or is placeholder.", file=sys.stderr)
-    else:
-        genai.configure(api_key=GOOGLE_API_KEY)
-        model = genai.GenerativeModel(MODEL_NAME)
-        print(f"Google AI client configured for Visualization Generator using model {MODEL_NAME}.")
-        client_configured = True
-except Exception as e:
-    print(f"❌ Error configuring Google AI client [VizGen]: {e}", file=sys.stderr)
+from routes.gemini_client import get_model, is_configured, MODEL_NAME
+import google.generativeai as genai
 
 
 # --- REVISED Prompt Template with Added Context ---
@@ -99,14 +83,14 @@ This section contains logs from the ML script (feature importances, R², MAE, sa
 # --- Generic Gemini Response Function (Keep as before) ---
 def generate_response(prompt_content: str):
     # ... (Keep the existing implementation) ...
-    if not client_configured or model is None:
+    if not is_configured() or get_model() is None:
         return "# Error: Google AI client not configured for Visualization Generator."
 
     try:
         print(f"Sending request to {MODEL_NAME} [VizGen]...")
         generation_config = genai.types.GenerationConfig(temperature=0.15)
 
-        response = model.generate_content(
+        response = get_model().generate_content(
             contents=prompt_content,
             generation_config=generation_config
         )
@@ -153,7 +137,7 @@ def generate_visualization_code(visualization_plan_str: str,
     """
     Generates Python code for visualizations based on the plan and context.
     """
-    if not client_configured:
+    if not is_configured():
         return "# Error: Cannot generate visualization code, Google AI client not configured."
 
     print("--- Generating Visualization Code with Context ---")

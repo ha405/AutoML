@@ -1,35 +1,9 @@
 import os
 import sys
 import re
-import time
 import traceback
 
-try:
-    import google.generativeai as genai
-    print(f"INFO ({__file__}): Successfully imported google.generativeai.", file=sys.stderr)
-except ImportError:
-    print(f"WARNING ({__file__}): google.generativeai not installed. Code fixing disabled.", file=sys.stderr)
-    genai = None
-
-genai_client = None
-if genai:
-    try:
-        GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY")
-        if not GEMINI_API_KEY:
-            GEMINI_API_KEY = "AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ"
-            print(f"WARNING ({__file__}): GOOGLE_API_KEY not set in environment variables. Using placeholder key.", file=sys.stderr)
-        
-        genai.configure(api_key=GEMINI_API_KEY)
-        MODEL_NAME = "gemini-2.0-flash"
-        genai_client = genai.GenerativeModel(MODEL_NAME)
-        print(f"INFO ({__file__}): Gemini client configured for code fixing using model {MODEL_NAME}.", file=sys.stderr)
-    except Exception as e:
-        print(f"ERROR ({__file__}): Error setting up Gemini client for code fixing: {e}", file=sys.stderr)
-        print(traceback.format_exc(), file=sys.stderr)
-        genai_client = None
-else:
-    print(f"INFO ({__file__}): google.generativeai library not available. Client not configured.", file=sys.stderr)
-    genai_client = None
+from routes.gemini_client import get_model, is_configured
 
 def clean_llm_code_output(raw_code: str) -> str:
     if not raw_code:
@@ -58,9 +32,8 @@ def attempt_code_fix(
     file_details_str: str,
     eda_guidance: str
 ) -> str | None:
-    global genai_client
-    if not genai_client:
-        print(f"ERROR ({__file__}): Global Gemini client not available or not configured. Skipping code fix attempt.", file=sys.stderr)
+    if not is_configured():
+        print(f"ERROR ({__file__}): Gemini client not configured. Skipping code fix attempt.", file=sys.stderr)
         return None
     if not failing_code_str:
         print(f"WARNING ({__file__}): No failing code provided. Skipping code fix attempt.", file=sys.stderr)
@@ -107,7 +80,7 @@ The following Python script encountered an error during execution. Your task is 
 {failing_code_str}
 """
     try:
-        response = genai_client.generate_content(contents={'parts': [{'text': prompt}]})
+        response = get_model().generate_content(contents={'parts': [{'text': prompt}]})
         if response and getattr(response, 'parts', None):
             raw_code = response.parts[0].text or ''
             return clean_llm_code_output(raw_code)

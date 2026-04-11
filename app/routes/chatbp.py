@@ -1,12 +1,8 @@
 import os
 import json
 from flask import Blueprint, session, request, jsonify, current_app as app
-import google.generativeai as genai
 from constants import FRONTEND_JSON_PATH, EDA_LOGS_FILE_PATH, ML_OUTPUT_LOGS_FILE
-
-# --- Configure Gemini client ---
-genai.configure(api_key="AIzaSyBF8Ik7v2Uwy_cRVzoDEj30g2oNpXPPlrQ")
-model = genai.GenerativeModel("gemini-2.0-flash")
+from routes.gemini_client import get_model
 
 chat_bp = Blueprint("chatlm", __name__)
 
@@ -85,7 +81,7 @@ def initialize_chat():
     ]
 
     try:
-        response = model.generate_content(messages)
+        response = get_model().generate_content(messages)
         raw_suggestion = response.text.strip()
         suggestion = format_suggestion(raw_suggestion)
     except Exception as e:
@@ -109,7 +105,7 @@ def chat_message():
     conversation.append({"role": "user", "parts": [{"text": user_msg}]})
 
     try:
-        response = model.generate_content(conversation)
+        response = get_model().generate_content(conversation)
         raw_response = response.text.strip()
         assistant_msg = format_suggestion(raw_response)
     except Exception as e:
